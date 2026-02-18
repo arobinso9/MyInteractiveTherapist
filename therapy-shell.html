@@ -1,0 +1,2469 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenShell - Therapy as a Service</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* 2026 Sensory-Safe Palette */
+            --sage-primary: #7B8C7C;
+            --sage-light: #98A899;
+            --sage-lighter: #B5C4B6;
+            --deep-blue: #1B263B;
+            --deep-blue-soft: #2D3A52;
+            --warm-neutral: #E5E5E2;
+            --warm-neutral-dark: #D0D0CD;
+            --warm-beige: #D4C5B9;
+            --warm-tan: #C9B8A8;
+
+            /* Sensory-Safe Functional Colors */
+            --text-primary: #3A3A38;
+            --text-secondary: #6B6B68;
+            --text-tertiary: #9B9B98;
+            --error-soft: #C1705F;
+            --success-soft: #7B8C7C;
+            --warning-soft: #B89968;
+
+            /* Transparent Layers for Calm */
+            --glass-bg: rgba(229, 229, 226, 0.65);
+            --glass-border: rgba(123, 140, 124, 0.25);
+
+            /* Gentle Shadows - Reduced opacity */
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            /* Optimized: Static gradient for performance */
+            background: linear-gradient(135deg, var(--sage-primary) 0%, var(--warm-neutral) 50%, var(--deep-blue-soft) 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            min-height: 600px;
+            /* Optimized: Solid background for performance */
+            background: #F5F5F2;
+            border-radius: 24px;
+            padding: 48px 56px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 2px solid rgba(123, 140, 124, 0.25);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Simplified top accent */
+        .app-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--sage-primary);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .view {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--deep-blue);
+            margin-bottom: 12px;
+            font-size: 2.5em;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            line-height: 1.3;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--deep-blue);
+            margin-bottom: 24px;
+            font-size: 1.9em;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        h3 {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            font-size: 1.15em;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1.05em;
+            font-weight: 400;
+            line-height: 1.7;
+            letter-spacing: 0em;
+        }
+
+        .form-group {
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            letter-spacing: 0.01em;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="email"],
+        input[type="tel"],
+        textarea {
+            width: 100%;
+            padding: 14px 18px;
+            background: #FFFFFF;
+            border: 2px solid #D0D0CD;
+            border-radius: 12px;
+            font-size: 1em;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.15s ease;
+        }
+
+        input[type="text"]:hover,
+        input[type="password"]:hover,
+        input[type="number"]:hover,
+        input[type="email"]:hover,
+        input[type="tel"]:hover,
+        textarea:hover {
+            border-color: var(--sage-light);
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--sage-primary);
+            box-shadow: 0 0 0 3px rgba(123, 140, 124, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        .slider-container {
+            margin: 36px 0;
+            padding: 32px;
+            background: rgba(229, 229, 226, 0.3);
+            border-radius: 16px;
+            border: 2px solid #D0D0CD;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 10px;
+            background: #E5E5E2;
+            border-radius: 10px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            background: var(--sage-primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid white;
+            transition: background 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: var(--sage-light);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            background: var(--sage-primary);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid white;
+            transition: background 0.15s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            background: var(--sage-light);
+        }
+
+        .slider-value {
+            text-align: center;
+            font-size: 4em;
+            font-weight: 700;
+            color: var(--sage-primary);
+            margin: 24px 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 0.92em;
+            margin-top: 16px;
+            font-weight: 500;
+        }
+
+        button {
+            /* Optimized: Solid background */
+            background: var(--sage-primary);
+            color: #FFFFFF;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.15s ease, transform 0.1s ease;
+            letter-spacing: 0.02em;
+        }
+
+        button:hover {
+            background: var(--sage-light);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: var(--deep-blue-soft);
+            margin-left: 12px;
+        }
+
+        button.secondary:hover {
+            background: var(--deep-blue);
+        }
+
+        button.danger {
+            background: var(--error-soft);
+        }
+
+        button.danger:hover {
+            background: #a95f4f;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .text-link {
+            color: var(--sage-primary);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.4s ease;
+            display: inline-block;
+        }
+
+        .text-link:hover {
+            color: var(--deep-blue);
+            border-bottom-color: var(--sage-primary);
+            transform: translateY(-1px);
+        }
+
+        /* Header with Edge AI indicator and controls */
+        .app-header {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 36px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--warm-neutral-dark);
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .app-header.visible {
+            display: flex;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .user-info {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 1.05em;
+        }
+
+        .user-info strong {
+            color: var(--deep-blue);
+            font-weight: 600;
+        }
+
+        /* Edge AI Trust Indicator */
+        .edge-ai-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, rgba(123, 140, 124, 0.15) 0%, rgba(181, 196, 182, 0.15) 100%);
+            border: 2px…</style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header with User Info and Logout -->
+        <div class="app-header visible" id="appHeader">
+            <div class="header-left">
+                <div class="user-info">
+                    Welcome, <strong id="headerUsername">aviva1</strong>
+                </div>
+                <!-- Edge AI Trust Indicator -->
+                <div class="edge-ai-badge" title="Your conversations are processed locally on your device. No data leaves your hardware.">
+                    On-Device Processing
+                </div>
+            </div>
+            <div class="header-controls">
+                <!-- "Right to Disappear" Feature - Two Options -->
+                <button class="delete-sessions-btn danger" onclick="confirmDeleteSessions()" title="Delete therapy session chats only">
+                    🗑️ Delete Sessions
+                </button>
+                <button class="delete-account-btn danger" onclick="confirmDeleteAccount()" title="Permanently wipe entire account">
+                    ⚠️ Wipe Account
+                </button>
+                <button class="logout-btn secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Auth View -->
+        <div id="auth-view" class="view">
+            <h1>Welcome to ZenShell</h1>
+            <p class="subtitle">Your personal therapy space</p>
+
+            <div class="form-group">
+                <label for="authUsername">Username</label>
+                <input type="text" id="authUsername" placeholder="Choose a username">
+            </div>
+
+            <div class="form-group">
+                <label for="authPassword">Password</label>
+                <input type="password" id="authPassword" placeholder="Enter password" oninput="updatePasswordStrength()">
+                <div id="passwordStrength" class="password-strength"></div>
+                <div id="passwordRequirements" class="password-requirements" style="display: none;">
+                    <div class="req-header">Password Requirements:</div>
+                    <div id="reqLength" class="req-item">✗ At least 10 characters</div>
+                    <div id="reqUpper" class="req-item">✗ One uppercase letter</div>
+                    <div id="reqLower" class="req-item">✗ One lowercase letter</div>
+                    <div id="reqNumber" class="req-item">✗ One number</div>
+                    <div id="reqSpecial" class="req-item">✗ One special character</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="handleLogin()">Login</button>
+                <button class="secondary" onclick="handleSignup()">Sign Up</button>
+            </div>
+
+            <div id="lockoutMessage" class="lockout-message" style="display: none;"></div>
+        </div>
+
+        <!-- Intake View -->
+        <div id="intake-view" class="view">
+            <h1>Client Intake &amp; Matching Form</h1>
+            <p class="subtitle">For Clinical Triage &amp; Psychologist Matching</p>
+
+            <div class="intake-scroll scrollbar-custom">
+                <!-- Section 1: Basic Information -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 1: Basic Information</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name <span class="required">*</span></label>
+                            <input type="text" id="fullName" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="preferredName">Preferred Name</label>
+                            <input type="text" id="preferredName">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pronouns">Pronouns <span class="required">*</span></label>
+                            <input type="text" id="pronouns" placeholder="e.g., she/her, he/him, they/them" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="dob">Date of Birth <span class="required">*</span></label>
+                            <input type="date" id="dob" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="genderIdentity">Gender Identity</label>
+                            <input type="text" id="genderIdentity">
+                        </div>
+                        <div class="form-group">
+                            <label for="sexAssigned">Sex Assigned at Birth</label>
+                            <select id="sexAssigned">
+                                <option value="">Select...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="intersex">Intersex</option>
+                                <option value="prefer-not-say">Prefer not to say</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">Phone Number <span class="required">*</span></label>
+                            <input type="tel" id="phone" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email <span class="required">*</span></label>
+                            <input type="email" id="email" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address (City/State) <span class="required">*</span></label>
+                        <input type="text" id="address" required="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emergencyContact">Emergency Contact (Name, Relationship, Phone) <span class="required">*</span></label>
+                        <input type="text" id="emergencyContact" required="">
+                    </div>
+                </div>
+
+                <!-- Section 2: Presenting Concerns -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 2: Presenting Concerns</h3>
+
+                    <div class="form-group">
+                        <label for="presenting">What brings you to therapy at this time? <span class="required">*</span></label>
+                        <textarea id="presenting" rows="4" required=""></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>How long have you been experiencing this concern? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="&lt;1month" required=""> Less than 1 month
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="1-6months"> 1–6 months
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="6-12months"> 6–12 months
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="1-5years"> 1–5 years
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="&gt;5years"> More than 5 years
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Primary issues (check all that apply) <span class="required">*</span>:</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="anxiety"> Anxiety / Panic</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="depression"> Depression</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="trauma"> Trauma / PTSD</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="relationship"> Relationship issues</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="marriage"> Marriage / Couples</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="family"> Family conflict</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="adhd"> ADHD</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="autism"> Autism spectrum</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="substance"> Substance use</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="grief"> Grief / Loss</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="eating"> Eating concerns</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="anger"> Anger issues</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="stress"> Stress / Burnout</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="transition"> Life transition</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="career"> Career concerns</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="ocd"> OCD</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="bipolar"> Bipolar disorder</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="personality"> Personality disorder concerns</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="selfesteem"> Self-esteem issues</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="lgbtq"> LGBTQ+ related support</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="cultural"> Cultural identity concerns</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="distressLevel">Current distress level (0 = no distress | 10 = worst imaginable):</label>
+                        <div class="slider-input-group">
+                            <input type="range" id="distressLevel" min="0" max="10" value="5" oninput="updateIntakeSlider('distressValue', this.value)">
+                            <span class="slider-display" id="distressValue">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Risk Assessment -->
+                <div class="intake-section risk-section">
+                    <h3 class="section-title">⚠️ Section 3: Risk Assessment (Critical for Matching)</h3>
+
+                    <div class="form-group">
+                        <label>Have you had thoughts of harming yourself in the past month? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="passive"> Yes – Passive (e.g., "wish I wasn't here")
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="active"> Yes – Active thoughts
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="plan"> Yes – With plan
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>History of suicide attempts? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="attempts" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="attempts" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="attemptsWhen" placeholder="If yes, when? (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Thoughts of harming others? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="harmOthers" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="harmOthers" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>History of self-harm? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="selfharmHistory" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharmHistory" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Are you currently safe? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="currentlySafe" value="yes" required=""> Yes
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="currentlySafe" value="unsure"> Not sure
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="currentlySafe" value="no"> No
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Mental Health History -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 4: Mental Health History</h3>
+
+                    <div class="form-group">
+                        <label>Previous therapy? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="prevTherapy" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="prevTherapy" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="therapyDetails" placeholder="If yes, how long? When? (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="whatWorked">What worked well in past therapy? (required if you selected yes above)</label>
+                        <textarea id="whatWorked" rows="2" placeholder="At least 5 words if you had previous therapy"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="whatDidntWork">What did NOT work well? (required if you selected yes above)</label>
+                        <textarea id="whatDidntWork" rows="2" placeholder="At least 5 words if you had previous therapy"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prevDiagnoses">Previous diagnoses (if any):</label>
+                        <textarea id="prevDiagnoses" rows="2" placeholder="Optional"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Psychiatric hospitalizations? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="hospitalizations" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="hospitalizations" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="hospitalizationDetails" placeholder="If yes, details (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+                </div>
+
+                <!-- Section 5: Medical & Medication -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 5: Medical &amp; Medication History</h3>
+
+                    <div class="form-group">
+                        <label for="medications">Current medications (psychiatric &amp; medical):</label>
+                        <textarea id="medications" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Current psychiatrist? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="psychiatrist" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="psychiatrist" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="medicalConditions">Chronic medical conditions:</label>
+                        <textarea id="medicalConditions" rows="2" placeholder="Optional"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sleep quality: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="good" required=""> Good
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="poor"> Poor
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="insomnia"> Insomnia
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="oversleeping"> Oversleeping
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Substance Use -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 6: Substance Use</h3>
+
+                    <div class="form-group">
+                        <label>In the past 3 months, frequency of: <span class="required">*</span> (All required)</label>
+                        <div class="substance-table">
+                            <div class="substance-row header-row">
+                                <span>Substance</span>
+                                <span>Never</span>
+                                <span>Monthly</span>
+                                <span>Weekly</span>
+                                <span>Daily</span>
+                            </div>
+                            <div class="substance-row">
+                                <span>Alcohol</span>
+                                <label><input type="radio" name="alcohol" value="never" required=""></label>
+                                <label><input type="radio" name="alcohol" value="monthly"></label>
+                                <label><input type="radio" name="alcohol" value="weekly"></label>
+                                <label><input type="radio" name="alcohol" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Marijuana</span>
+                                <label><input type="radio" name="marijuana" value="never" required=""></label>
+                                <label><input type="radio" name="marijuana" value="monthly"></label>
+                                <label><input type="radio" name="marijuana" value="weekly"></label>
+                                <label><input type="radio" name="marijuana" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Cocaine</span>
+                                <label><input type="radio" name="cocaine" value="never" required=""></label>
+                                <label><input type="radio" name="cocaine" value="monthly"></label>
+                                <label><input type="radio" name="cocaine" value="weekly"></label>
+                                <label><input type="radio" name="cocaine" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Opioids</span>
+                                <label><input type="radio" name="opioids" value="never" required=""></label>
+                                <label><input type="radio" name="opioids" value="monthly"></label>
+                                <label><input type="radio" name="opioids" value="weekly"></label>
+                                <label><input type="radio" name="opioids" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Other</span>
+                                <label><input type="radio" name="otherSubstance" value="never" required=""></label>
+                                <label><input type="radio" name="otherSubstance" value="monthly"></label>
+                                <label><input type="radio" name="otherSubstance" value="weekly"></label>
+                                <label><input type="radio" name="otherSubstance" value="daily"></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="substanceConcerns">Concerns about substance use?</label>
+                        <textarea id="substanceConcerns" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 7: Trauma Screening -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 7: Trauma Screening</h3>
+
+                    <div class="form-group">
+                        <label>Have you experienced: <span class="required">*</span> (Check at least one, including "None" if applicable)</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="physical"> Physical abuse</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="sexual"> Sexual abuse</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="emotional"> Emotional abuse</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="neglect"> Neglect</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="domestic"> Domestic violence</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="combat"> Combat trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="accident"> Accident/injury trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="religious"> Religious trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="medical"> Medical trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="none"> None</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Do you experience flashbacks, nightmares, or hypervigilance? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="traumaSymptoms" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="traumaSymptoms" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 8: Relationships -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 8: Relationships &amp; Social Support</h3>
+
+                    <div class="form-group">
+                        <label>Relationship status: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="relStatus" value="single" required=""> Single</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="partnered"> Partnered</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="married"> Married</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="divorced"> Divorced</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="separated"> Separated</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Children? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="children" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="children" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="childrenAges" placeholder="If yes, ages (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="socialSupport">Quality of social support (0–10):</label>
+                        <div class="slider-input-group">
+                            <input type="range" id="socialSupport" min="0" max="10" value="5" oninput="updateIntakeSlider('socialValue', this.value)">
+                            <span class="slider-display" id="socialValue">5</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="relationalStress">Major relational stress currently?</label>
+                        <textarea id="relationalStress" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 9: Functioning -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 9: Functioning</h3>
+
+                    <div class="form-group">
+                        <label>Work/School status: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="workStatus" value="employed" required=""> Employed</label>
+                            <label class="radio-label"><input type="radio" name="workStatus" value="student"> Student</label>
+                            <label class="radio-label"><input type="radio" name="workStatus" value="unemployed"> Unemployed</label>
+                            <label class="radio-label"><input type="radio" name="workStatus" value="leave"> On leave</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Performance impacted by mental health? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="performance" value="no" required=""> No</label>
+                            <label class="radio-label"><input type="radio" name="performance" value="mild"> Mild</label>
+                            <label class="radio-label"><input type="radio" name="performance" value="moderate"> Moderate</label>
+                            <label class="radio-label"><input type="radio" name="performance" value="severe"> Severe</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Daily functioning: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="functioning" value="independent" required=""> Independent</label>
+                            <label class="radio-label"><input type="radio" name="functioning" value="some"> Some difficulty</label>
+                            <label class="radio-label"><input type="radio" name="functioning" value="significant"> Significant impairment</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 10: Therapy Preference -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 10: Personality &amp; Therapy Preference</h3>
+
+                    <div class="form-group">
+                        <label>What type of therapist do you prefer? <span class="required">*</span> (Check at least one)</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="direct"> Direct / Structured</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="warm"> Warm / Supportive</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="insight"> Insight-oriented</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="skills"> Skills-based (CBT/DBT)</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="trauma"> Trauma-focused</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="faith"> Faith-based</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="culturally"> Culturally matched</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="lgbtq"> LGBTQ+ affirming</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="none"> No preference</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Therapy style preference: <span class="required">*</span> (Check at least one)</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="homework"> Homework-focused</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="conversation"> Open-ended conversation</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="emotional"> Deep emotional processing</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="practical"> Practical coping tools</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 11: Cultural Factors -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 11: Cultural &amp; Identity Factors</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ethnicity">Ethnicity/Race: <span class="required">*</span></label>
+                            <input type="text" id="ethnicity" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="religion">Religion/Spirituality: <span class="required">*</span></label>
+                            <input type="text" id="religion" placeholder="Can be 'None' or 'Prefer not to say'" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="culturalConsiderations">Cultural considerations important for therapist to know:</label>
+                        <textarea id="culturalConsiderations" rows="2" placeholder="Optional"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="primaryLanguage">Primary language: <span class="required">*</span></label>
+                        <input type="text" id="primaryLanguage" required="">
+                    </div>
+                </div>
+
+                <!-- Section 12: Goals -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 12: Goals for Therapy</h3>
+
+                    <div class="form-group">
+                        <label for="therapySuccess">What would success in therapy look like for you? <span class="required">*</span></label>
+                        <textarea id="therapySuccess" rows="3" placeholder="At least 10 words" required=""></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal1">Top Goal #1: <span class="required">*</span></label>
+                        <input type="text" id="goal1" placeholder="At least 3 words" required="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal2">Top Goal #2: <span class="required">*</span></label>
+                        <input type="text" id="goal2" placeholder="At least 3 words" required="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal3">Top Goal #3: <span class="required">*</span></label>
+                        <input type="text" id="goal3" placeholder="At least 3 words" required="">
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="completeIntake()">Submit Intake Form</button>
+                <button class="secondary" onclick="saveDraft()">Save Draft</button>
+            </div>
+        </div>
+
+        <!-- Progress/Dashboard View -->
+        <div id="progress-view" class="view active">
+            <h2>Your Journey</h2>
+
+            <div class="profile-summary" id="profileSummary">
+                <h3>aviva</h3>
+                <p><strong>Age:</strong> 26 | <strong>Pronouns:</strong> she</p>
+                <p><strong>Contact:</strong> happydancinghippos@gmail.com | 999-999-9999</p>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid rgba(135, 169, 107, 0.3);">
+                <p style="margin-top: 10px;"><strong>Presenting Concern:</strong></p>
+                <p style="font-style: italic; margin-top: 5px;">"hello a a a a a a a  a a a a a a a a  a a a a a a a a  a a a a a a a  a a a a a a a a a  a a a a a a a a  a a a a a a  a a a a  a a a   a  a a a a a  a a a a a a a a a a  a a a a a  a a a a a a a  a a a a"</p>
+
+                    <p style="margin-top: 10px;"><strong>Primary Issues:</strong> anxiety</p>
+
+
+                    <p style="margin-top: 10px;"><strong>Current Distress Level:</strong> <span style="color: var(--sage); font-weight: bold;">3/10</span></p>
+
+
+                    <p style="margin-top: 10px;"><strong>Therapy Goals:</strong></p>
+                    <p style="font-style: italic; margin-top: 5px;">"having all my ffears washed away and be an awesome amazing oaerson the worl has everseen"</p>
+
+            </div>
+
+            <h3 style="color: var(--slate); margin-bottom: 15px;">Session History</h3>
+            <div id="sessionHistory"><div class="empty-state">No sessions yet. Start your first session to begin tracking your progress.</div></div>
+
+            <div class="button-group">
+                <button onclick="startNewSession()">Start New Session</button>
+                <button class="secondary" onclick="render('intake')">Update Profile</button>
+            </div>
+        </div>
+
+        <!-- Pre-Check View -->
+        <div id="pre-check-view" class="view">
+            <h2>How are you feeling right now?</h2>
+            <p class="subtitle">Rate your current stress level</p>
+
+            <div class="slider-container">
+                <div class="slider-value" id="stressValue">5</div>
+                <input type="range" id="stressSlider" min="1" max="10" value="5" oninput="updateSliderValue('stressValue', this.value)">
+                <div class="slider-labels">
+                    <span>1 - Peaceful</span>
+                    <span>10 - Overwhelming</span>
+                </div>
+            </div>
+
+            <button onclick="enterTherapySession()">Continue to Session</button>
+        </div>
+
+        <!-- Session View -->
+        <div id="session-view" class="view">
+            <h2>Therapy Session</h2>
+
+            <div class="chat-container">
+                <div class="chat-messages scrollbar-custom" id="chatMessages"></div>
+
+                <div class="chat-input-group">
+                    <input type="text" id="chatInput" placeholder="Share your thoughts..." onkeypress="handleChatKeyPress(event)">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="endSession()">End Session</button>
+            </div>
+        </div>
+
+        <!-- Post-Check View -->
+        <div id="post-check-view" class="view">
+            <h2>How do you feel now?</h2>
+            <p class="subtitle">Let's reflect on your progress</p>
+
+            <div class="slider-container">
+                <div class="slider-value" id="resolutionValue">5</div>
+                <input type="range" id="resolutionSlider" min="1" max="10" value="5" oninput="updateSliderValue('resolutionValue', this.value)">
+                <div class="slider-labels">
+                    <span>1 - Peaceful</span>
+                    <span>10 - Overwhelming</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="takeaway">What's your key takeaway from this session?</label>
+                <textarea id="takeaway" placeholder="What insight or feeling will you carry forward?"></textarea>
+            </div>
+
+            <div class="button-group">
+                <button onclick="completeSession()">Complete Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crisis Help Button -->
+    <button class="crisis-button" onclick="showCrisisHelp()">🆘 Crisis Help</button>
+
+    <script>
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let currentUser = null;
+        let tempSessionData = {
+            initialStress: 5,
+            chatHistory: []
+        };
+
+        // ============================================
+        // PASSWORD SECURITY CONSTANTS
+        // ============================================
+        const COMMON_PASSWORDS = [
+            'password', 'password123', '123456', '12345678', 'qwerty', 'abc123',
+            'monkey', '1234567', 'letmein', 'trustno1', 'dragon', 'baseball',
+            'iloveyou', 'master', 'sunshine', 'ashley', 'bailey', 'shadow',
+            'superman', 'qazwsx', 'michael', 'football', 'welcome', 'jesus',
+            'ninja', 'mustang', 'password1', 'password!', 'admin', 'root',
+            'bank2026', 'therapy', 'zenshell', 'health', 'mental', 'wellness',
+            'Password123!', 'Welcome123', 'Admin123!', 'Test1234!', 'User1234!'
+        ];
+
+        const COMMON_PATTERNS = [
+            /^password/i,
+            /^welcome/i,
+            /^admin/i,
+            /^user/i,
+            /^test/i,
+            /^qwerty/i,
+            /^abc123/i,
+            /123456/,
+            /^letmein/i,
+            /^iloveyou/i,
+            /^\d{6,}$/, // All numbers
+            /^[a-z]+$/i, // All letters
+            /(.)\1{2,}/, // Repeated characters (aaa, 111)
+            /^(?=.*bank)(?=.*\d{4})/i, // Bank + year
+            /^(?=.*password)(?=.*\d+)/i // Password + numbers
+        ];
+
+        // Progressive lockout delays
+        const LOCKOUT_DELAYS = [
+            1 * 60 * 1000,      // 1st attempt: 1 minute
+            5 * 60 * 1000,      // 2nd attempt: 5 minutes
+            15 * 60 * 1000,     // 3rd attempt: 15 minutes
+            30 * 60 * 1000,     // 4th attempt: 30 minutes
+            60 * 60 * 1000,     // 5th attempt: 1 hour
+            24 * 60 * 60 * 1000 // 6th+ attempts: 1 day
+        ];
+
+        // ============================================
+        // SAFE-SAVE PATTERN (Atomic Updates)
+        // ============================================
+        function safeSaveUser(updatesCallback) {
+            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
+            if (!currentUser) return;
+
+            const usernameKey = currentUser.username.toLowerCase();
+            const userClone = JSON.parse(JSON.stringify(db[usernameKey])); // Deep clone
+
+            updatesCallback(userClone); // Apply updates
+
+            db[usernameKey] = userClone;
+            localStorage.setItem('zen_users_db', JSON.stringify(db));
+            currentUser = userClone; // Sync memory with storage
+        }
+
+        // ============================================
+        // PASSWORD SECURITY FUNCTIONS
+        // ============================================
+        function validatePasswordStrength(password) {
+            const checks = {
+                length: password.length >= 10,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+            };
+
+            const allValid = Object.values(checks).every(v => v);
+            return { checks, allValid };
+        }
+
+        function isCommonPassword(password) {
+            const lowerPassword = password.toLowerCase();
+
+            // Check exact matches
+            if (COMMON_PASSWORDS.some(common => lowerPassword === common.toLowerCase())) {
+                return true;
+            }
+
+            // Check patterns
+            if (COMMON_PATTERNS.some(pattern => pattern.test(password))) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function containsUserInfo(password, username) {
+            const lowerPassword = password.toLowerCase();
+            const lowerUsername = username.toLowerCase();
+
+            // Check if password contains username
+            if (lowerPassword.includes(lowerUsername)) {
+                return true;
+            }
+
+            // Check if username contains password
+            if (lowerUsername.includes(lowerPassword) && password.length > 3) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function hasPasswordBeenUsed(username, newPassword) {
+            const user = getUserByUsername(username);
+            if (!user || !user.passwordHistory) return false;
+
+            // Check last 10 passwords
+            return user.passwordHistory.slice(-10).includes(newPassword);
+        }
+
+        function updatePasswordStrength() {
+            const password = document.getElementById('authPassword').value;
+            const strengthBar = document.getElementById('passwordStrength');
+            const requirements = document.getElementById('passwordRequirements');
+
+            if (password.length === 0) {
+                strengthBar.innerHTML = '';
+                requirements.style.display = 'none';
+                return;
+            }
+
+            // Show requirements during signup
+            requirements.style.display = 'block';
+
+            const { checks } = validatePasswordStrength(password);
+
+            // Update requirement checkmarks
+            document.getElementById('reqLength').className = checks.length ? 'req-item valid' : 'req-item';
+            document.getElementById('reqLength').textContent = checks.length ? '✓ At least 10 characters' : '✗ At least 10 characters';
+
+            document.getElementById('reqUpper').className = checks.uppercase ? 'req-item valid' : 'req-item';
+            document.getElementById('reqUpper').textContent = checks.uppercase ? '✓ One uppercase letter' : '✗ One uppercase letter';
+
+            document.getElementById('reqLower').className = checks.lowercase ? 'req-item valid' : 'req-item';
+            document.getElementById('reqLower').textContent = checks.lowercase ? '✓ One lowercase letter' : '✗ One lowercase letter';
+
+            document.getElementById('reqNumber').className = checks.number ? 'req-item valid' : 'req-item';
+            document.getElementById('reqNumber').textContent = checks.number ? '✓ One number' : '✗ One number';
+
+            document.getElementById('reqSpecial').className = checks.special ? 'req-item valid' : 'req-item';
+            document.getElementById('reqSpecial').textContent = checks.special ? '✓ One special character' : '✗ One special character';
+
+            // Calculate strength
+            const score = Object.values(checks).filter(v => v).length;
+            let strengthClass = '';
+
+            if (score <= 2) {
+                strengthClass = 'strength-weak';
+            } else if (score <= 4) {
+                strengthClass = 'strength-medium';
+            } else {
+                strengthClass = 'strength-strong';
+            }
+
+            strengthBar.innerHTML = `<div class="password-strength-bar ${strengthClass}"></div>`;
+        }
+
+        // ============================================
+        // LOCKOUT MANAGEMENT
+        // ============================================
+        function getLoginAttempts(username) {
+            const attempts = JSON.parse(localStorage.getItem('zen_login_attempts') || '{}');
+            return attempts[username.toLowerCase()] || { count: 0, lastAttempt: null, lockedUntil: null };
+        }
+
+        function recordFailedLogin(username) {
+            const attempts = JSON.parse(localStorage.getItem('zen_login_attempts') || '{}');
+            const key = username.toLowerCase();
+
+            if (!attempts[key]) {
+                attempts[key] = { count: 0, lastAttempt: null, lockedUntil: null };
+            }
+
+            attempts[key].count++;
+            attempts[key].lastAttempt = Date.now();
+
+            // Progressive lockout: use the delay corresponding to attempt count
+            // If count exceeds array length, use the last delay (1 day)
+            const delayIndex = Math.min(attempts[key].count - 1, LOCKOUT_DELAYS.length - 1);
+            const lockoutDuration = LOCKOUT_DELAYS[delayIndex];
+
+            attempts[key].lockedUntil = Date.now() + lockoutDuration;
+
+            localStorage.setItem('zen_login_attempts', JSON.stringify(attempts));
+            return attempts[key];
+        }
+
+        function resetLoginAttempts(username) {
+            const attempts = JSON.parse(localStorage.getItem('zen_login_attempts') || '{}');
+            const key = username.toLowerCase();
+            delete attempts[key];
+            localStorage.setItem('zen_login_attempts', JSON.stringify(attempts));
+        }
+
+        function isAccountLocked(username) {
+            const attempt = getLoginAttempts(username);
+
+            if (attempt.lockedUntil && Date.now() < attempt.lockedUntil) {
+                const remainingMs = attempt.lockedUntil - Date.now();
+                const remainingMinutes = Math.ceil(remainingMs / 60000);
+                const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+                const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+
+                let timeString;
+                if (remainingMs < 60 * 60 * 1000) {
+                    // Less than 1 hour: show minutes
+                    timeString = `${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`;
+                } else if (remainingMs < 24 * 60 * 60 * 1000) {
+                    // Less than 1 day: show hours
+                    timeString = `${remainingHours} hour${remainingHours > 1 ? 's' : ''}`;
+                } else {
+                    // 1 day or more: show days
+                    timeString = `${remainingDays} day${remainingDays > 1 ? 's' : ''}`;
+                }
+
+                return { locked: true, timeString, attemptCount: attempt.count };
+            }
+
+            // Lockout expired, reset
+            if (attempt.lockedUntil && Date.now() >= attempt.lockedUntil) {
+                resetLoginAttempts(username);
+            }
+
+            return { locked: false, attemptCount: attempt.count };
+        }
+
+        function showLockoutMessage(timeString, attemptCount) {
+            const msg = document.getElementById('lockoutMessage');
+            msg.style.display = 'block';
+            msg.textContent = `🔒 Account locked after ${attemptCount} failed attempt${attemptCount > 1 ? 's' : ''}. Please try again in ${timeString}.`;
+        }
+
+        function hideLockoutMessage() {
+            document.getElementById('lockoutMessage').style.display = 'none';
+        }
+
+        // ============================================
+        // DATABASE HELPERS
+        // ============================================
+        function getUserByUsername(username) {
+            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
+            const key = username.toLowerCase();
+            return db[key] || null;
+        }
+
+        function createUser(username, password) {
+            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
+            const key = username.toLowerCase();
+
+            if (db[key]) {
+                return { success: false, error: 'Username already exists' };
+            }
+
+            db[key] = {
+                username: username,
+                password: password, // In production, hash this!
+                passwordHistory: [password], // Track password history
+                hasCompletedIntake: false,
+                intakeData: null,
+                intakeDraftSaved: false,
+                sessions: [],
+                createdAt: new Date().toISOString()
+            };
+
+            localStorage.setItem('zen_users_db', JSON.stringify(db));
+            return { success: true };
+        }
+
+        function setCurrentUser(username) {
+            localStorage.setItem('zen_current_user', username);
+        }
+
+        function getCurrentUserFromStorage() {
+            return localStorage.getItem('zen_current_user');
+        }
+
+        function clearCurrentUser() {
+            localStorage.removeItem('zen_current_user');
+        }
+
+        // ============================================
+        // AUTH HANDLERS
+        // ============================================
+        function handleLogin() {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+
+            hideLockoutMessage();
+
+            if (!username || !password) {
+                alert('Please enter both username and password');
+                return;
+            }
+
+            // Check if account is locked
+            const lockStatus = isAccountLocked(username);
+            if (lockStatus.locked) {
+                showLockoutMessage(lockStatus.timeString, lockStatus.attemptCount);
+                return;
+            }
+
+            const user = getUserByUsername(username);
+            if (!user) {
+                const attemptData = recordFailedLogin(username);
+                const nextLockStatus = isAccountLocked(username);
+
+                showLockoutMessage(nextLockStatus.timeString, nextLockStatus.attemptCount);
+                return;
+            }
+
+            if (user.password !== password) {
+                const attemptData = recordFailedLogin(username);
+                const nextLockStatus = isAccountLocked(username);
+
+                showLockoutMessage(nextLockStatus.timeString, nextLockStatus.attemptCount);
+                return;
+            }
+
+            // Successful login - reset attempts
+            resetLoginAttempts(username);
+            currentUser = user;
+            setCurrentUser(username);
+
+            // Clear form
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authPassword').value = '';
+
+            // Route based on intake completion
+            if (user.hasCompletedIntake) {
+                render('progress');
+            } else {
+                render('intake');
+            }
+        }
+
+        function handleSignup() {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+
+            if (!username || !password) {
+                alert('Please enter both username and password');
+                return;
+            }
+
+            // Username validation
+            if (username.length < 3) {
+                alert('Username must be at least 3 characters');
+                return;
+            }
+
+            if (username.length > 30) {
+                alert('Username must be less than 30 characters');
+                return;
+            }
+
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                alert('Username can only contain letters, numbers, and underscores');
+                return;
+            }
+
+            // Password strength validation
+            const { checks, allValid } = validatePasswordStrength(password);
+
+            if (!checks.length) {
+                alert('❌ Password must be at least 10 characters long');
+                return;
+            }
+
+            if (!checks.uppercase) {
+                alert('❌ Password must contain at least one uppercase letter');
+                return;
+            }
+
+            if (!checks.lowercase) {
+                alert('❌ Password must contain at least one lowercase letter');
+                return;
+            }
+
+            if (!checks.number) {
+                alert('❌ Password must contain at least one number');
+                return;
+            }
+
+            if (!checks.special) {
+                alert('❌ Password must contain at least one special character (!@#$%^&*...)');
+                return;
+            }
+
+            // Check for common passwords
+            if (isCommonPassword(password)) {
+                alert('❌ This password is too common and appears in breach databases. Please choose a stronger, unique password.');
+                return;
+            }
+
+            // Check if password contains username
+            if (containsUserInfo(password, username)) {
+                alert('❌ Password cannot contain your username');
+                return;
+            }
+
+            // All checks passed - create user
+            const result = createUser(username, password);
+            if (!result.success) {
+                alert(result.error);
+                return;
+            }
+
+            alert('✅ Account created successfully! Please login with your credentials.');
+
+            // Clear password field
+            document.getElementById('authPassword').value = '';
+            updatePasswordStrength();
+        }
+
+        function logout() {
+            currentUser = null;
+            clearCurrentUser();
+            tempSessionData = {
+                initialStress: 5,
+                chatHistory: []
+            };
+            render('auth');
+        }
+
+        // ============================================
+        // "RIGHT TO DISAPPEAR" - TWO DELETE OPTIONS
+        // ============================================
+
+        // OPTION 1: Delete Session Chats Only
+        function confirmDeleteSessions() {
+            const step1 = confirm(
+                "🗑️ DELETE SESSION CHATS - STEP 1 of 2\n\n" +
+                "This will PERMANENTLY delete:\n" +
+                "• All therapy session history\n" +
+                "• All chat transcripts\n" +
+                "• All stress ratings and takeaways\n\n" +
+                "Your intake form and account will remain intact.\n\n" +
+                "Continue to Step 2?"
+            );
+
+            if (!step1) return;
+
+            const step2 = confirm(
+                "🗑️ FINAL CONFIRMATION - STEP 2 of 2\n\n" +
+                "Delete all session chats?\n" +
+                "This CANNOT be undone.\n\n" +
+                "Click OK to delete sessions."
+            );
+
+            if (step2) {
+                deleteSessionsOnly();
+            }
+        }
+
+        function deleteSessionsOnly() {
+            if (!currentUser) return;
+
+            safeSaveUser(user => {
+                user.sessions = [];
+            });
+
+            alert(
+                "✓ Sessions Deleted\n\n" +
+                "All therapy sessions have been deleted.\n" +
+                "Your intake form and account remain intact."
+            );
+
+            tempSessionData = {
+                initialStress: 5,
+                chatHistory: []
+            };
+
+            render('progress');
+        }
+
+        // OPTION 2: Wipe Entire Account
+        function confirmDeleteAccount() {
+            const step1 = confirm(
+                "⚠️ WIPE ACCOUNT - STEP 1 of 2\n\n" +
+                "This will PERMANENTLY delete:\n" +
+                "• All therapy sessions and chats\n" +
+                "• Your intake form data\n" +
+                "• YOUR ENTIRE ACCOUNT\n\n" +
+                "You will need to create a NEW account.\n\n" +
+                "Continue to Step 2?"
+            );
+
+            if (!step1) return;
+
+            const step2 = confirm(
+                "⚠️ FINAL CONFIRMATION - STEP 2 of 2\n\n" +
+                "WIPE YOUR ENTIRE ACCOUNT?\n\n" +
+                "• All data will be PERMANENTLY deleted\n" +
+                "• You will be logged out\n" +
+                "• This CANNOT be undone\n\n" +
+                "Click OK to wipe account completely."
+            );
+
+            if (step2) {
+                wipeAccount();
+            }
+        }
+
+        function wipeAccount() {
+            if (!currentUser) return;
+
+            const username = currentUser.username.toLowerCase();
+            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
+
+            // Completely remove user from database
+            delete db[username];
+            localStorage.setItem('zen_users_db', JSON.stringify(db));
+
+            alert(
+                "✓ Account Wiped\n\n" +
+                "Your account has been permanently deleted.\n" +
+                "All data has been removed.\n\n" +
+                "You can create a new account if desired."
+            );
+
+            // Logout and clear everything
+            currentUser = null;
+            clearCurrentUser();
+            tempSessionData = {
+                initialStress: 5,
+                chatHistory: []
+            };
+
+            render('auth');
+        }
+
+        // ============================================
+        // ROUTING WITH INTAKE GATEKEEPER
+        // ============================================
+        function render(route) {
+            // Intake Gatekeeper Logic
+            if (currentUser && !currentUser.hasCompletedIntake) {
+                if (route === 'progress' || route === 'pre-check' || route === 'session' || route === 'post-check') {
+                    route = 'intake'; // Force redirect to intake
+                }
+            }
+
+            // Hide all views
+            const views = document.querySelectorAll('.view');
+            views.forEach(view => view.classList.remove('active'));
+
+            // Show target view
+            const targetView = document.getElementById(`${route}-view`);
+            if (targetView) {
+                targetView.classList.add('active');
+            }
+
+            // Update header visibility
+            const header = document.getElementById('appHeader');
+            if (currentUser && route !== 'auth') {
+                header.classList.add('visible');
+                document.getElementById('headerUsername').textContent = currentUser.username;
+            } else {
+                header.classList.remove('visible');
+            }
+
+            // Clear auth form when leaving auth view
+            if (route !== 'auth') {
+                document.getElementById('authPassword').value = '';
+                document.getElementById('passwordStrength').innerHTML = '';
+                document.getElementById('passwordRequirements').style.display = 'none';
+                hideLockoutMessage();
+            }
+
+            // View-specific rendering
+            if (route === 'progress') {
+                renderProfileSummary();
+                renderSessionHistory();
+            } else if (route === 'intake') {
+                loadIntakeForm();
+            }
+        }
+
+        // ============================================
+        // INTAKE FORM HELPERS
+        // ============================================
+        function updateIntakeSlider(displayId, value) {
+            document.getElementById(displayId).textContent = value;
+        }
+
+        function getRadioValue(name) {
+            const radio = document.querySelector(`input[name="${name}"]:checked`);
+            return radio ? radio.value : '';
+        }
+
+        function getCheckboxValues(name) {
+            const checkboxes = document.querySelectorAll(`input[name="${name}"]:checked`);
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function setRadioValue(name, value) {
+            const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        function setCheckboxValues(name, values) {
+            if (!values || !Array.isArray(values)) return;
+            values.forEach(value => {
+                const checkbox = document.querySelector(`input[name="${name}"][value="${value}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+
+        // ============================================
+        // INTAKE FORM
+        // ============================================
+        function loadIntakeForm() {
+            if (!currentUser || !currentUser.intakeData) return;
+
+            const intake = currentUser.intakeData;
+
+            // Section 1: Basic Information
+            document.getElementById('fullName').value = intake.fullName || '';
+            document.getElementById('preferredName').value = intake.preferredName || '';
+            document.getElementById('pronouns').value = intake.pronouns || '';
+            document.getElementById('dob').value = intake.dob || '';
+            document.getElementById('genderIdentity').value = intake.genderIdentity || '';
+            document.getElementById('sexAssigned').value = intake.sexAssigned || '';
+            document.getElementById('phone').value = intake.phone || '';
+            document.getElementById('email').value = intake.email || '';
+            document.getElementById('address').value = intake.address || '';
+            document.getElementById('emergencyContact').value = intake.emergencyContact || '';
+
+            // Section 2: Presenting Concerns
+            document.getElementById('presenting').value = intake.presenting || '';
+            setRadioValue('duration', intake.duration);
+            setCheckboxValues('issues', intake.issues);
+            document.getElementById('distressLevel').value = intake.distressLevel || 5;
+            updateIntakeSlider('distressValue', intake.distressLevel || 5);
+
+            // Section 3: Risk Assessment
+            setRadioValue('selfharm', intake.selfharm);
+            setRadioValue('attempts', intake.attempts);
+            document.getElementById('attemptsWhen').value = intake.attemptsWhen || '';
+            setRadioValue('harmOthers', intake.harmOthers);
+            setRadioValue('selfharmHistory', intake.selfharmHistory);
+            setRadioValue('currentlySafe', intake.currentlySafe);
+
+            // Section 4: Mental Health History
+            setRadioValue('prevTherapy', intake.prevTherapy);
+            document.getElementById('therapyDetails').value = intake.therapyDetails || '';
+            document.getElementById('whatWorked').value = intake.whatWorked || '';
+            document.getElementById('whatDidntWork').value = intake.whatDidntWork || '';
+            document.getElementById('prevDiagnoses').value = intake.prevDiagnoses || '';
+            setRadioValue('hospitalizations', intake.hospitalizations);
+            document.getElementById('hospitalizationDetails').value = intake.hospitalizationDetails || '';
+
+            // Section 5: Medical
+            document.getElementById('medications').value = intake.medications || '';
+            setRadioValue('psychiatrist', intake.psychiatrist);
+            document.getElementById('medicalConditions').value = intake.medicalConditions || '';
+            setRadioValue('sleep', intake.sleep);
+
+            // Section 6: Substance Use
+            setRadioValue('alcohol', intake.alcohol);
+            setRadioValue('marijuana', intake.marijuana);
+            setRadioValue('cocaine', intake.cocaine);
+            setRadioValue('opioids', intake.opioids);
+            setRadioValue('otherSubstance', intake.otherSubstance);
+            document.getElementById('substanceConcerns').value = intake.substanceConcerns || '';
+
+            // Section 7: Trauma
+            setCheckboxValues('trauma', intake.trauma);
+            setRadioValue('traumaSymptoms', intake.traumaSymptoms);
+
+            // Section 8: Relationships
+            setRadioValue('relStatus', intake.relStatus);
+            setRadioValue('children', intake.children);
+            document.getElementById('childrenAges').value = intake.childrenAges || '';
+            document.getElementById('socialSupport').value = intake.socialSupport || 5;
+            updateIntakeSlider('socialValue', intake.socialSupport || 5);
+            document.getElementById('relationalStress').value = intake.relationalStress || '';
+
+            // Section 9: Functioning
+            setRadioValue('workStatus', intake.workStatus);
+            setRadioValue('performance', intake.performance);
+            setRadioValue('functioning', intake.functioning);
+
+            // Section 10: Therapy Preference
+            setCheckboxValues('therapistType', intake.therapistType);
+            setCheckboxValues('therapyStyle', intake.therapyStyle);
+
+            // Section 11: Cultural
+            document.getElementById('ethnicity').value = intake.ethnicity || '';
+            document.getElementById('religion').value = intake.religion || '';
+            document.getElementById('culturalConsiderations').value = intake.culturalConsiderations || '';
+            document.getElementById('primaryLanguage').value = intake.primaryLanguage || '';
+
+            // Section 12: Goals
+            document.getElementById('therapySuccess').value = intake.therapySuccess || '';
+            document.getElementById('goal1').value = intake.goal1 || '';
+            document.getElementById('goal2').value = intake.goal2 || '';
+            document.getElementById('goal3').value = intake.goal3 || '';
+        }
+
+        function collectIntakeData() {
+            return {
+                // Section 1: Basic Information
+                fullName: document.getElementById('fullName').value.trim(),
+                preferredName: document.getElementById('preferredName').value.trim(),
+                pronouns: document.getElementById('pronouns').value.trim(),
+                dob: document.getElementById('dob').value,
+                genderIdentity: document.getElementById('genderIdentity').value.trim(),
+                sexAssigned: document.getElementById('sexAssigned').value,
+                phone: document.getElementById('phone').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                address: document.getElementById('address').value.trim(),
+                emergencyContact: document.getElementById('emergencyContact').value.trim(),
+
+                // Section 2: Presenting Concerns
+                presenting: document.getElementById('presenting').value.trim(),
+                duration: getRadioValue('duration'),
+                issues: getCheckboxValues('issues'),
+                distressLevel: parseInt(document.getElementById('distressLevel').value),
+
+                // Section 3: Risk Assessment
+                selfharm: getRadioValue('selfharm'),
+                attempts: getRadioValue('attempts'),
+                attemptsWhen: document.getElementById('attemptsWhen').value.trim(),
+                harmOthers: getRadioValue('harmOthers'),
+                selfharmHistory: getRadioValue('selfharmHistory'),
+                currentlySafe: getRadioValue('currentlySafe'),
+
+                // Section 4: Mental Health History
+                prevTherapy: getRadioValue('prevTherapy'),
+                therapyDetails: document.getElementById('therapyDetails').value.trim(),
+                whatWorked: document.getElementById('whatWorked').value.trim(),
+                whatDidntWork: document.getElementById('whatDidntWork').value.trim(),
+                prevDiagnoses: document.getElementById('prevDiagnoses').value.trim(),
+                hospitalizations: getRadioValue('hospitalizations'),
+                hospitalizationDetails: document.getElementById('hospitalizationDetails').value.trim(),
+
+                // Section 5: Medical
+                medications: document.getElementById('medications').value.trim(),
+                psychiatrist: getRadioValue('psychiatrist'),
+                medicalConditions: document.getElementById('medicalConditions').value.trim(),
+                sleep: getRadioValue('sleep'),
+
+                // Section 6: Substance Use
+                alcohol: getRadioValue('alcohol'),
+                marijuana: getRadioValue('marijuana'),
+                cocaine: getRadioValue('cocaine'),
+                opioids: getRadioValue('opioids'),
+                otherSubstance: getRadioValue('otherSubstance'),
+                substanceConcerns: document.getElementById('substanceConcerns').value.trim(),
+
+                // Section 7: Trauma
+                trauma: getCheckboxValues('trauma'),
+                traumaSymptoms: getRadioValue('traumaSymptoms'),
+
+                // Section 8: Relationships
+                relStatus: getRadioValue('relStatus'),
+                children: getRadioValue('children'),
+                childrenAges: document.getElementById('childrenAges').value.trim(),
+                socialSupport: parseInt(document.getElementById('socialSupport').value),
+                relationalStress: document.getElementById('relationalStress').value.trim(),
+
+                // Section 9: Functioning
+                workStatus: getRadioValue('workStatus'),
+                performance: getRadioValue('performance'),
+                functioning: getRadioValue('functioning'),
+
+                // Section 10: Therapy Preference
+                therapistType: getCheckboxValues('therapistType'),
+                therapyStyle: getCheckboxValues('therapyStyle'),
+
+                // Section 11: Cultural
+                ethnicity: document.getElementById('ethnicity').value.trim(),
+                religion: document.getElementById('religion').value.trim(),
+                culturalConsiderations: document.getElementById('culturalConsiderations').value.trim(),
+                primaryLanguage: document.getElementById('primaryLanguage').value.trim(),
+
+                // Section 12: Goals
+                therapySuccess: document.getElementById('therapySuccess').value.trim(),
+                goal1: document.getElementById('goal1').value.trim(),
+                goal2: document.getElementById('goal2').value.trim(),
+                goal3: document.getElementById('goal3').value.trim(),
+
+                completedAt: new Date().toISOString()
+            };
+        }
+
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        function validatePhone(phone) {
+            // Remove all non-digits
+            const digits = phone.replace(/\D/g, '');
+            // Must be 10 or 11 digits (with optional country code)
+            return digits.length >= 10 && digits.length <= 11;
+        }
+
+        function validateMinWords(text, minWords) {
+            if (!text) return false;
+            const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+            return words.length >= minWords;
+        }
+
+        function validateMinLength(text, minLength) {
+            return text && text.trim().length >= minLength;
+        }
+
+        function completeIntake() {
+            const intakeData = collectIntakeData();
+            const errors = [];
+
+            // Section 1: Basic Information - ALL MANDATORY
+            if (!intakeData.fullName) {
+                errors.push('• Full Name is required');
+            }
+            if (!intakeData.preferredName) {
+                errors.push('• Preferred Name is required');
+            }
+            if (!intakeData.pronouns) {
+                errors.push('• Pronouns are required');
+            }
+            if (!intakeData.dob) {
+                errors.push('• Date of Birth is required');
+            }
+            if (!intakeData.genderIdentity) {
+                errors.push('• Gender Identity is required');
+            }
+            if (!intakeData.sexAssigned) {
+                errors.push('• Sex Assigned at Birth is required');
+            }
+
+            // Email validation
+            if (!intakeData.email) {
+                errors.push('• Email is required');
+            } else if (!validateEmail(intakeData.email)) {
+                errors.push('• Email must be a valid email address (e.g., name@example.com)');
+            }
+
+            // Phone validation
+            if (!intakeData.phone) {
+                errors.push('• Phone Number is required');
+            } else if (!validatePhone(intakeData.phone)) {
+                errors.push('• Phone Number must be valid (10-11 digits)');
+            }
+
+            // Address validation - must be meaningful
+            if (!intakeData.address) {
+                errors.push('• Address (City/State) is required');
+            } else if (!validateMinLength(intakeData.address, 10)) {
+                errors.push('• Address must be at least 10 characters (e.g., "Boston, MA")');
+            }
+
+            if (!intakeData.emergencyContact) {
+                errors.push('• Emergency Contact is required');
+            } else if (!validateMinWords(intakeData.emergencyContact, 3)) {
+                errors.push('• Emergency Contact must include Name, Relationship, and Phone (at least 3 words)');
+            }
+
+            // Section 2: Presenting Concerns - MANDATORY
+            if (!intakeData.presenting) {
+                errors.push('• "What brings you to therapy" is required');
+            } else if (!validateMinWords(intakeData.presenting, 10)) {
+                errors.push('• "What brings you to therapy" must be at least 10 words (not just a one-word answer)');
+            }
+
+            if (!intakeData.duration) {
+                errors.push('• Duration of concern is required');
+            }
+
+            if (!intakeData.issues || intakeData.issues.length === 0) {
+                errors.push('• Please select at least one Primary Issue');
+            }
+
+            // Section 3: Risk Assessment - ALL MANDATORY
+            if (!intakeData.selfharm) {
+                errors.push('• "Thoughts of harming yourself" question is required');
+            }
+            if (!intakeData.attempts) {
+                errors.push('• "History of suicide attempts" question is required');
+            }
+            if (!intakeData.harmOthers) {
+                errors.push('• "Thoughts of harming others" question is required');
+            }
+            if (!intakeData.selfharmHistory) {
+                errors.push('• "History of self-harm" question is required');
+            }
+            if (!intakeData.currentlySafe) {
+                errors.push('• "Are you currently safe" question is required');
+            }
+
+            // Section 4: Mental Health History - MANDATORY
+            if (!intakeData.prevTherapy) {
+                errors.push('• "Previous therapy" question is required');
+            }
+
+            // Conditional: Only required if they answered "yes" to previous therapy
+            if (intakeData.prevTherapy === 'yes') {
+                if (!intakeData.whatWorked) {
+                    errors.push('• "What worked well in past therapy" is required when you have had previous therapy');
+                } else if (!validateMinWords(intakeData.whatWorked, 5)) {
+                    errors.push('• "What worked well" must be at least 5 words');
+                }
+
+                if (!intakeData.whatDidntWork) {
+                    errors.push('• "What did NOT work well" is required when you have had previous therapy');
+                } else if (!validateMinWords(intakeData.whatDidntWork, 5)) {
+                    errors.push('• "What did NOT work well" must be at least 5 words');
+                }
+            }
+
+            // Conditional: Only required if they answered "yes" to suicide attempts
+            if (intakeData.attempts === 'yes') {
+                if (!intakeData.attemptsWhen) {
+                    errors.push('• "When" is required when you have history of suicide attempts');
+                }
+            }
+
+            if (!intakeData.hospitalizations) {
+                errors.push('• "Psychiatric hospitalizations" question is required');
+            }
+
+            // Conditional: Only required if they answered "yes" to hospitalizations
+            if (intakeData.hospitalizations === 'yes') {
+                if (!intakeData.hospitalizationDetails) {
+                    errors.push('• Hospitalization details are required when you have been hospitalized');
+                }
+            }
+
+            // Section 5: Medical - MANDATORY
+            if (!intakeData.psychiatrist) {
+                errors.push('• "Current psychiatrist" question is required');
+            }
+            if (!intakeData.sleep) {
+                errors.push('• "Sleep quality" question is required');
+            }
+
+            // Section 6: Substance Use - ALL MANDATORY
+            if (!intakeData.alcohol) {
+                errors.push('• Alcohol frequency is required');
+            }
+            if (!intakeData.marijuana) {
+                errors.push('• Marijuana frequency is required');
+            }
+            if (!intakeData.cocaine) {
+                errors.push('• Cocaine frequency is required');
+            }
+            if (!intakeData.opioids) {
+                errors.push('• Opioids frequency is required');
+            }
+            if (!intakeData.otherSubstance) {
+                errors.push('• Other substance frequency is required');
+            }
+
+            // Section 7: Trauma - MANDATORY
+            if (!intakeData.trauma || intakeData.trauma.length === 0) {
+                errors.push('• Please select trauma history (select "None" if not applicable)');
+            }
+            if (!intakeData.traumaSymptoms) {
+                errors.push('• "Flashbacks/nightmares" question is required');
+            }
+
+            // Section 8: Relationships - MANDATORY
+            if (!intakeData.relStatus) {
+                errors.push('• Relationship status is required');
+            }
+            if (!intakeData.children) {
+                errors.push('• "Children" question is required');
+            }
+
+            // Conditional: Only required if they answered "yes" to children
+            if (intakeData.children === 'yes') {
+                if (!intakeData.childrenAges) {
+                    errors.push('• Children ages are required when you have children');
+                }
+            }
+
+            // Section 9: Functioning - ALL MANDATORY
+            if (!intakeData.workStatus) {
+                errors.push('• Work/School status is required');
+            }
+            if (!intakeData.performance) {
+                errors.push('• "Performance impacted by mental health" is required');
+            }
+            if (!intakeData.functioning) {
+                errors.push('• "Daily functioning" is required');
+            }
+
+            // Section 10: Therapy Preference - MANDATORY
+            if (!intakeData.therapistType || intakeData.therapistType.length === 0) {
+                errors.push('• Please select at least one Therapist Type preference (or "No preference")');
+            }
+            if (!intakeData.therapyStyle || intakeData.therapyStyle.length === 0) {
+                errors.push('• Please select at least one Therapy Style preference');
+            }
+
+            // Section 11: Cultural - MANDATORY
+            if (!intakeData.ethnicity) {
+                errors.push('• Ethnicity/Race is required');
+            }
+            if (!intakeData.religion) {
+                errors.push('• Religion/Spirituality is required (can be "None" or "Prefer not to say")');
+            }
+            if (!intakeData.primaryLanguage) {
+                errors.push('• Primary language is required');
+            }
+
+            // Section 12: Goals - MANDATORY with word counts
+            if (!intakeData.therapySuccess) {
+                errors.push('• "What would success look like" is required');
+            } else if (!validateMinWords(intakeData.therapySuccess, 10)) {
+                errors.push('• "What would success look like" must be at least 10 words (provide a meaningful description)');
+            }
+
+            if (!intakeData.goal1) {
+                errors.push('• Top Goal #1 is required');
+            } else if (!validateMinWords(intakeData.goal1, 3)) {
+                errors.push('• Top Goal #1 must be at least 3 words');
+            }
+
+            if (!intakeData.goal2) {
+                errors.push('• Top Goal #2 is required');
+            } else if (!validateMinWords(intakeData.goal2, 3)) {
+                errors.push('• Top Goal #2 must be at least 3 words');
+            }
+
+            if (!intakeData.goal3) {
+                errors.push('• Top Goal #3 is required');
+            } else if (!validateMinWords(intakeData.goal3, 3)) {
+                errors.push('• Top Goal #3 must be at least 3 words');
+            }
+
+            // If there are any errors, show them
+            if (errors.length > 0) {
+                const errorMessage = '❌ PLEASE COMPLETE ALL REQUIRED FIELDS:\n\n' + errors.join('\n');
+                alert(errorMessage);
+                return;
+            }
+
+            // Crisis check (after all validation passes)
+            if (intakeData.currentlySafe === 'no' || intakeData.selfharm === 'plan') {
+                alert('⚠️ IMMEDIATE CRISIS DETECTED\n\nPlease call:\n• 988 (Suicide & Crisis Lifeline)\n• 911 (Emergency Services)\n\nYour safety is our top priority.');
+                return;
+            }
+
+            // All validation passed - save
+            safeSaveUser((user) => {
+                user.hasCompletedIntake = true;
+                user.intakeData = intakeData;
+                user.intakeCompletedAt = new Date().toISOString();
+            });
+
+            alert('✅ Intake form submitted successfully!\n\nAll required information has been validated and saved.');
+            render('progress');
+        }
+
+        function saveDraft() {
+            const intakeData = collectIntakeData();
+
+            // Safe-save pattern
+            safeSaveUser((user) => {
+                user.intakeData = intakeData;
+                user.intakeDraftSaved = true;
+            });
+
+            alert('✅ Draft saved! You can continue later.');
+        }
+
+        // ============================================
+        // PROGRESS/DASHBOARD VIEW
+        // ============================================
+        function renderProfileSummary() {
+            if (!currentUser || !currentUser.intakeData) {
+                document.getElementById('profileSummary').innerHTML = '<p style="text-align: center; opacity: 0.7;">Complete your intake form to see your profile summary.</p>';
+                return;
+            }
+
+            const container = document.getElementById('profileSummary');
+            const intake = currentUser.intakeData;
+
+            // Calculate age from DOB
+            let age = '';
+            if (intake.dob) {
+                const dob = new Date(intake.dob);
+                const today = new Date();
+                age = Math.floor((today - dob) / (365.25 * 24 * 60 * 60 * 1000));
+            }
+
+            container.innerHTML = `
+                <h3>${intake.preferredName || intake.fullName}</h3>
+                <p><strong>Age:</strong> ${age} | <strong>Pronouns:</strong> ${intake.pronouns || 'Not specified'}</p>
+                <p><strong>Contact:</strong> ${intake.email} | ${intake.phone}</p>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid rgba(135, 169, 107, 0.3);">
+                <p style="margin-top: 10px;"><strong>Presenting Concern:</strong></p>
+                <p style="font-style: italic; margin-top: 5px;">"${intake.presenting}"</p>
+                ${intake.issues && intake.issues.length > 0 ? `
+                    <p style="margin-top: 10px;"><strong>Primary Issues:</strong> ${intake.issues.join(', ')}</p>
+                ` : ''}
+                ${intake.distressLevel ? `
+                    <p style="margin-top: 10px;"><strong>Current Distress Level:</strong> <span style="color: var(--sage); font-weight: bold;">${intake.distressLevel}/10</span></p>
+                ` : ''}
+                ${intake.therapySuccess ? `
+                    <p style="margin-top: 10px;"><strong>Therapy Goals:</strong></p>
+                    <p style="font-style: italic; margin-top: 5px;">"${intake.therapySuccess}"</p>
+                ` : ''}
+            `;
+        }
+
+        function renderSessionHistory() {
+            if (!currentUser) return;
+
+            const container = document.getElementById('sessionHistory');
+            const sessions = currentUser.sessions || [];
+
+            if (sessions.length === 0) {
+                container.innerHTML = '<div class="empty-state">No sessions yet. Start your first session to begin tracking your progress.</div>';
+                return;
+            }
+
+            // Sort by most recent first
+            const sortedSessions = [...sessions].sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+
+            container.innerHTML = sortedSessions.map(session => {
+                const date = new Date(session.timestamp);
+                const formattedDate = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const improvement = session.initialStress - session.finalStress;
+                const improvementText = improvement > 0
+                    ? `↓ ${improvement} (Improved)`
+                    : improvement < 0
+                    ? `↑ ${Math.abs(improvement)} (Increased)`
+                    : '→ 0 (Stable)';
+
+                const card = document.createElement('div');
+                card.className = 'session-card';
+
+                const header = document.createElement('div');
+                header.className = 'session-header';
+
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'session-date';
+                dateSpan.textContent = formattedDate;
+
+                const improvementSpan = document.createElement('span');
+                improvementSpan.textContent = improvementText;
+
+                header.appendChild(dateSpan);
+                header.appendChild(improvementSpan);
+
+                const indicator = document.createElement('div');
+                indicator.className = 'stress-indicator';
+                indicator.innerHTML = `
+                    <span>Initial: <span class="stress-value">${session.initialStress}/10</span></span>
+                    <span>Final: <span class="stress-value">${session.finalStress}/10</span></span>
+                `;
+
+                const takeaway = document.createElement('div');
+                takeaway.className = 'takeaway';
+                takeaway.textContent = `"${session.takeaway}"`;
+
+                card.appendChild(header);
+                card.appendChild(indicator);
+                card.appendChild(takeaway);
+
+                return card.outerHTML;
+            }).join('');
+        }
+
+        // ============================================
+        // SESSION FLOW
+        // ============================================
+        function startNewSession() {
+            tempSessionData = {
+                initialStress: 5,
+                chatHistory: []
+            };
+            document.getElementById('stressSlider').value = 5;
+            updateSliderValue('stressValue', 5);
+            render('pre-check');
+        }
+
+        function updateSliderValue(elementId, value) {
+            document.getElementById(elementId).textContent = value;
+        }
+
+        function enterTherapySession() {
+            tempSessionData.initialStress = parseInt(document.getElementById('stressSlider').value);
+
+            // Get name and presenting concern from intake
+            const name = currentUser.intakeData?.preferredName || currentUser.intakeData?.fullName || 'there';
+            const concern = currentUser.intakeData?.presenting || 'your concerns';
+
+            // Initialize chat with welcome message
+            const welcomeMessage = {
+                type: 'therapist',
+                text: `Hello ${name}, I'm here to listen. You mentioned: "${concern}". How does that make you feel?`
+            };
+
+            tempSessionData.chatHistory = [welcomeMessage];
+            renderChatMessages();
+
+            render('session');
+        }
+
+        // ============================================
+        // CHAT FUNCTIONS
+        // ============================================
+        function renderChatMessages() {
+            const chatContainer = document.getElementById('chatMessages');
+            chatContainer.innerHTML = '';
+
+            tempSessionData.chatHistory.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.type}`;
+                messageDiv.textContent = msg.text; // XSS-safe
+                chatContainer.appendChild(messageDiv);
+            });
+
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            // Add user message
+            tempSessionData.chatHistory.push({
+                type: 'user',
+                text: text
+            });
+
+            renderChatMessages();
+            input.value = '';
+
+            // Show thinking indicator
+            tempSessionData.chatHistory.push({
+                type: 'thinking',
+                text: 'Thinking...'
+            });
+            renderChatMessages();
+
+            // Get mock response after 2 seconds
+            setTimeout(() => {
+                // Remove thinking message
+                tempSessionData.chatHistory.pop();
+
+                // Add therapist response
+                const response = getMockResponse(text);
+                tempSessionData.chatHistory.push({
+                    type: 'therapist',
+                    text: response
+                });
+
+                renderChatMessages();
+            }, 2000);
+        }
+
+        function getMockResponse(userMessage) {
+            const name = currentUser.intakeData?.preferredName || currentUser.intakeData?.fullName || 'there';
+            const responses = [
+                `${name}, I hear you. Can you tell me more about what that means to you?`,
+                `That sounds challenging, ${name}. How long have you been feeling this way?`,
+                `I appreciate you sharing that with me. What do you think might help you feel better about this?`,
+                `${name}, it's important that you've recognized this. What emotions come up when you think about it?`,
+                `Thank you for being so open. How do you typically cope when you feel this way?`,
+                `I'm glad you're here, ${name}. What would you like to be different?`,
+                `That's a valuable insight. How does acknowledging this make you feel right now?`,
+                `${name}, you're doing important work here. What's one small step you could take?`
+            ];
+
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        function endSession() {
+            document.getElementById('resolutionSlider').value = 5;
+            updateSliderValue('resolutionValue', 5);
+            document.getElementById('takeaway').value = '';
+            render('post-check');
+        }
+
+        // ============================================
+        // COMPLETE SESSION & SAVE
+        // ============================================
+        function completeSession() {
+            const finalStress = parseInt(document.getElementById('resolutionSlider').value);
+            const takeaway = document.getElementById('takeaway').value.trim();
+
+            if (!takeaway) {
+                alert('Please share your key takeaway before completing the session');
+                return;
+            }
+
+            // Create session record
+            const session = {
+                timestamp: new Date().toISOString(),
+                initialStress: tempSessionData.initialStress,
+                finalStress: finalStress,
+                takeaway: takeaway
+            };
+
+            // Safe-save pattern
+            safeSaveUser((user) => {
+                if (!user.sessions) {
+                    user.sessions = [];
+                }
+                user.sessions.push(session);
+            });
+
+            // Reset temp data
+            tempSessionData = {
+                initialStress: 5,
+                chatHistory: []
+            };
+
+            render('progress');
+        }
+
+        // ============================================
+        // CRISIS HELP
+        // ============================================
+        function showCrisisHelp() {
+            alert(`🆘 CRISIS RESOURCES 🆘
+
+If you're in immediate danger, please call emergency services.
+
+US Resources:
+• National Suicide Prevention Lifeline: 988
+• Crisis Text Line: Text HOME to 741741
+• SAMHSA National Helpline: 1-800-662-4357
+
+International:
+• Find local resources at findahelpline.com
+
+You are not alone. Help is available 24/7.`);
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        window.addEventListener('load', () => {
+            const storedUsername = getCurrentUserFromStorage();
+
+            if (storedUsername) {
+                const user = getUserByUsername(storedUsername);
+                if (user) {
+                    currentUser = user;
+                    console.log(`Welcome back, ${currentUser.username}!`);
+
+                    if (user.hasCompletedIntake) {
+                        render('progress');
+                    } else {
+                        render('intake');
+                    }
+                    return;
+                }
+            }
+
+            // No stored user, show auth
+            render('auth');
+        });
+    </script>
+
+</body></html>
+
+
