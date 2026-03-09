@@ -177,6 +177,58 @@
 
     .header-controls { display: flex; gap: 8px; flex-wrap: wrap; }
 
+    /* ─── Custom Modal ───────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(27,38,59,.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9000;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s ease;
+    }
+    .modal-overlay.visible { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: var(--glass-bg);
+      border: 1.5px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px 44px;
+      max-width: 420px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      text-align: center;
+      transform: translateY(14px) scale(.97);
+      transition: transform .25s ease;
+    }
+    .modal-overlay.visible .modal-box { transform: translateY(0) scale(1); }
+    .modal-icon  { font-size: 2.4rem; margin-bottom: 12px; }
+    .modal-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      color: var(--deep-blue); font-size: 1.35rem; font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .modal-body  {
+      color: var(--text-secondary); font-size: .95rem; line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    .modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    /* ─── Toast ──────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      padding: 14px 28px; border-radius: 999px;
+      font-size: .95rem; font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s ease, transform .3s ease;
+      z-index: 9999; white-space: nowrap;
+      color: #fff; background: var(--deep-blue);
+    }
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--sage); }
+    .toast.error   { background: var(--error); }
+
     /* ─── Forms ───────────────────────────────────────────────────────── */
     .form-group { margin-bottom: 22px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -603,6 +655,30 @@
       font-size: .93rem;
     }
 
+    /* ─── Session Slips ───────────────────────────────────────────────── */
+    .slip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .slip-step {
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      background: rgba(123,140,124,.12);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      padding: 4px 12px;
+    }
+    .slip-required-note {
+      font-size: .82rem;
+      color: var(--text-tertiary);
+      margin-bottom: 20px;
+    }
+
     /* ─── Spinner ─────────────────────────────────────────────────────── */
     .spinner {
       display: inline-block;
@@ -646,7 +722,6 @@
   <div class="app-header" id="appHeader">
     <div class="header-left">
       <div class="user-info">Welcome, <strong id="headerUsername">–</strong></div>
-      <span class="edge-badge">Server-Side Processing</span>
     </div>
     <div class="header-controls">
       <button class="ghost" onclick="ui.confirmDeleteSessions()">🗑 Delete Sessions</button>
@@ -657,8 +732,8 @@
 
   <!-- ── Auth View ──────────────────────────────────────────────────── -->
   <div id="view-auth" class="view active">
-    <h1>Welcome to ZenShell</h1>
-    <p class="subtitle">Your private, secure therapy space. All data lives on our server — never in your browser.</p>
+    <h1>Welcome to Therapy</h1>
+    <p class="subtitle">Your private, secure therapy space.</p>
 
     <div class="form-group">
       <label for="authUsername">Username</label>
@@ -1197,20 +1272,107 @@
     </div>
   </div>
 
-  <!-- ── Pre-Session View ───────────────────────────────────────────── -->
+  <!-- ── Entry Slip (Pre-Session) ──────────────────────────────────── -->
   <div id="view-pre-check" class="view">
-    <h2>Before We Begin</h2>
-    <p class="subtitle">Rate how you're feeling <em>right now</em>, before the session starts.</p>
-
-    <div class="slider-wrap">
-      <div class="slider-val" id="preStressVal">5</div>
-      <input type="range" id="preStressSlider" min="1" max="10" value="5"
-             oninput="document.getElementById('preStressVal').textContent=this.value" />
-      <div class="slider-labels"><span>1 – Peaceful</span><span>10 – Overwhelming</span></div>
+    <div class="slip-header">
+      <h2 style="margin-bottom:0">Before We Begin</h2>
+      <span class="slip-step">Entry Slip · 7 questions</span>
     </div>
+    <p class="subtitle">Take a moment to settle in. There are no right or wrong answers here — just honest ones.</p>
+    <p class="slip-required-note">Fields marked <span class="required">*</span> are required.</p>
+
+    <div id="entrySlipAlert" class="alert"></div>
+
+    <div class="intake-scroll">
+
+      <!-- Q1 -->
+      <div class="intake-section">
+        <div class="section-title">1 · How are you feeling right now, emotionally?</div>
+        <div class="slider-wrap">
+          <div class="slider-val" id="entryEmotionalVal">5</div>
+          <input type="range" id="entryEmotionalRating" min="0" max="10" value="5"
+                 oninput="document.getElementById('entryEmotionalVal').textContent=this.value" />
+          <div class="slider-labels">
+            <span>0 – Overwhelmed / shut down</span>
+            <span>10 – Calm &amp; grounded</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="intake-section">
+        <div class="section-title">2 · Which feelings are most present right now?
+          <small style="font-weight:400;color:var(--text-secondary)">(Choose up to 3 — optional)</small>
+        </div>
+        <div class="checkbox-grid">
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="anxious"     onchange="slips.limitFeelings(this)" /> Anxious</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="sad"         onchange="slips.limitFeelings(this)" /> Sad</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="angry"       onchange="slips.limitFeelings(this)" /> Angry</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="overwhelmed" onchange="slips.limitFeelings(this)" /> Overwhelmed</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="ashamed"     onchange="slips.limitFeelings(this)" /> Ashamed</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="confused"    onchange="slips.limitFeelings(this)" /> Confused</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="frustrated"  onchange="slips.limitFeelings(this)" /> Frustrated</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="lonely"      onchange="slips.limitFeelings(this)" /> Lonely</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="numb"        onchange="slips.limitFeelings(this)" /> Numb</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="exhausted"   onchange="slips.limitFeelings(this)" /> Exhausted</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="hopeful"     onchange="slips.limitFeelings(this)" /> Hopeful</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryFeeling" value="calm"        onchange="slips.limitFeelings(this)" /> Calm</label>
+        </div>
+        <input type="text" id="entryFeelingOther" placeholder="Other (optional)" style="margin-top:10px" />
+      </div>
+
+      <!-- Q3 -->
+      <div class="intake-section">
+        <div class="section-title">3 · What feels heaviest or most important to talk about today? <span class="required">*</span></div>
+        <textarea id="entryHeaviest" rows="3" placeholder="Share what's weighing on you…"></textarea>
+      </div>
+
+      <!-- Q4 -->
+      <div class="intake-section">
+        <div class="section-title">4 · What do you most need from this session right now? <span class="required">*</span></div>
+        <div class="checkbox-grid">
+          <label class="checkbox-label"><input type="checkbox" name="entryNeed" value="heard"        /> To feel heard</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryNeed" value="calmer"       /> To feel calmer</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryNeed" value="understand"   /> To understand my emotions</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryNeed" value="sort_through" /> To sort through something difficult</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryNeed" value="less_stuck"   /> To feel less stuck</label>
+          <label class="checkbox-label"><input type="checkbox" name="entryNeed" value="next_step"    /> To find one next step</label>
+        </div>
+        <input type="text" id="entryNeedOther" placeholder="Other (optional)" style="margin-top:10px" />
+      </div>
+
+      <!-- Q5 -->
+      <div class="intake-section">
+        <div class="section-title">5 · How much capacity do you have for this session today?</div>
+        <div class="slider-wrap">
+          <div class="slider-val" id="entryCapacityVal">5</div>
+          <input type="range" id="entryCapacityRating" min="0" max="10" value="5"
+                 oninput="document.getElementById('entryCapacityVal').textContent=this.value" />
+          <div class="slider-labels">
+            <span>0 – Very little in me</span>
+            <span>10 – Ready to engage</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q6 -->
+      <div class="intake-section">
+        <div class="section-title">6 · If this session were helpful, what would feel different by the end? <span class="required">*</span></div>
+        <textarea id="entryHopedOutcome" rows="3" placeholder="What shift would feel meaningful?"></textarea>
+      </div>
+
+      <!-- Q7 -->
+      <div class="intake-section">
+        <div class="section-title">7 · Anything important to hold in mind as we begin?
+          <small style="font-weight:400;color:var(--text-secondary)">(Optional)</small>
+        </div>
+        <textarea id="entryHoldInMind" rows="2" placeholder="Anything you'd like your therapist to know…"></textarea>
+      </div>
+
+    </div><!-- /intake-scroll -->
 
     <div class="button-group">
-      <button onclick="api.startSession()">Continue to Session →</button>
+      <button id="btnEntrySubmit" onclick="api.startSession()">Begin Session →</button>
       <button class="secondary" onclick="nav('progress')">← Back</button>
     </div>
   </div>
@@ -1233,25 +1395,98 @@
     </div>
   </div>
 
-  <!-- ── Post-Session View ─────────────────────────────────────────── -->
+  <!-- ── Exit Slip (Post-Session) ─────────────────────────────────── -->
   <div id="view-post-check" class="view">
-    <h2>Session Reflection</h2>
-    <p class="subtitle">Rate how you're feeling <em>after</em> the session.</p>
-
-    <div class="slider-wrap">
-      <div class="slider-val" id="postStressVal">5</div>
-      <input type="range" id="postStressSlider" min="1" max="10" value="5"
-             oninput="document.getElementById('postStressVal').textContent=this.value" />
-      <div class="slider-labels"><span>1 – Peaceful</span><span>10 – Overwhelming</span></div>
+    <div class="slip-header">
+      <h2 style="margin-bottom:0">Before We End</h2>
+      <span class="slip-step">Exit Slip · 8 questions</span>
     </div>
+    <p class="subtitle">You showed up. That matters. Take a moment before you go.</p>
+    <p class="slip-required-note">Fields marked <span class="required">*</span> are required.</p>
 
-    <div class="form-group" style="margin-top:8px">
-      <label for="postTakeaway">What's your key takeaway from this session?</label>
-      <textarea id="postTakeaway" rows="4" placeholder="What insight or feeling will you carry forward?"></textarea>
-    </div>
+    <div id="exitSlipAlert" class="alert"></div>
+
+    <div class="intake-scroll">
+
+      <!-- Q1 -->
+      <div class="intake-section">
+        <div class="section-title">1 · How are you feeling right now, emotionally?</div>
+        <div class="slider-wrap">
+          <div class="slider-val" id="exitEmotionalVal">5</div>
+          <input type="range" id="exitEmotionalRating" min="0" max="10" value="5"
+                 oninput="document.getElementById('exitEmotionalVal').textContent=this.value" />
+          <div class="slider-labels">
+            <span>0 – Overwhelmed / shut down</span>
+            <span>10 – Calm &amp; grounded</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="intake-section">
+        <div class="section-title">2 · Compared to the beginning, I feel: <span class="required">*</span></div>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="exitShift" value="more_settled"          /> More settled</label>
+          <label class="radio-label"><input type="radio" name="exitShift" value="lighter"               /> A little lighter</label>
+          <label class="radio-label"><input type="radio" name="exitShift" value="clearer"               /> Clearer</label>
+          <label class="radio-label"><input type="radio" name="exitShift" value="same"                  /> About the same</label>
+          <label class="radio-label"><input type="radio" name="exitShift" value="more_emotional_helpful" /> More emotional, but in a helpful way</label>
+          <label class="radio-label"><input type="radio" name="exitShift" value="more_overwhelmed"      /> More overwhelmed</label>
+          <label class="radio-label"><input type="radio" name="exitShift" value="unsure"                /> Unsure</label>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="intake-section">
+        <div class="section-title">3 · What felt most helpful, meaningful, or true in today's session? <span class="required">*</span></div>
+        <textarea id="exitMostHelpful" rows="3" placeholder="What resonated with you?"></textarea>
+      </div>
+
+      <!-- Q4 -->
+      <div class="intake-section">
+        <div class="section-title">4 · What is one thing you want to remember after this session? <span class="required">*</span></div>
+        <textarea id="exitRemember" rows="2" placeholder="One insight, feeling, or truth to carry with you…"></textarea>
+      </div>
+
+      <!-- Q5 -->
+      <div class="intake-section">
+        <div class="section-title">5 · What is one small, realistic step you're willing to try before next time? <span class="required">*</span></div>
+        <textarea id="exitNextStep" rows="2" placeholder="Keep it small and specific…"></textarea>
+      </div>
+
+      <!-- Q6 -->
+      <div class="intake-section">
+        <div class="section-title">6 · How confident do you feel about doing that step?</div>
+        <div class="slider-wrap">
+          <div class="slider-val" id="exitConfidenceVal">5</div>
+          <input type="range" id="exitConfidenceRating" min="0" max="10" value="5"
+                 oninput="document.getElementById('exitConfidenceVal').textContent=this.value" />
+          <div class="slider-labels">
+            <span>0 – Not confident at all</span>
+            <span>10 – I feel ready</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q7 -->
+      <div class="intake-section">
+        <div class="section-title">7 · What might help you follow through with care? <span class="required">*</span></div>
+        <textarea id="exitFollowThrough" rows="2" placeholder="What support, reminder, or condition would help?"></textarea>
+      </div>
+
+      <!-- Q8 -->
+      <div class="intake-section">
+        <div class="section-title">8 · Is there anything that still feels unfinished as we close?
+          <small style="font-weight:400;color:var(--text-secondary)">(Optional)</small>
+        </div>
+        <textarea id="exitUnfinished" rows="2" placeholder="It's okay to name what remains…"></textarea>
+      </div>
+
+    </div><!-- /intake-scroll -->
 
     <div class="button-group">
-      <button onclick="api.closeSession()">Complete Session ✓</button>
+      <button id="btnExitSubmit" onclick="api.closeSession()">Complete Session ✓</button>
+      <button class="ghost" onclick="nav('session')">← Return to Session</button>
     </div>
   </div>
 
@@ -1303,6 +1538,7 @@ function nav(route) {
     renderProfile();
     renderSessionHistory();
   }
+  if (route === 'pre-check') slips.resetEntry();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1429,9 +1665,52 @@ const api = {
   // ── Sessions ────────────────────────────────────────────────────
 
   async startSession() {
-    const preStress = parseInt(document.getElementById('preStressSlider').value);
-    const { ok, data } = await api._fetch('POST', '/api/sessions', { pre_stress: preStress });
-    if (!ok) { alert(data.error || 'Could not start session.'); return; }
+    clearAlert('entrySlipAlert');
+
+    const entrySlip = {
+      emotional_rating: parseInt(document.getElementById('entryEmotionalRating').value),
+      feelings:         checkboxes('entryFeeling'),
+      feeling_other:    v('entryFeelingOther'),
+      heaviest_concern: v('entryHeaviest'),
+      session_needs:    checkboxes('entryNeed'),
+      need_other:       v('entryNeedOther'),
+      capacity_rating:  parseInt(document.getElementById('entryCapacityRating').value),
+      hoped_outcome:    v('entryHopedOutcome'),
+      hold_in_mind:     v('entryHoldInMind'),
+    };
+
+    // Client-side validation
+    if (!entrySlip.heaviest_concern) {
+      showAlert('entrySlipAlert', 'error', 'Please share what feels heaviest today (Q3).');
+      document.getElementById('entryHeaviest').focus();
+      return;
+    }
+    if (!entrySlip.session_needs.length) {
+      showAlert('entrySlipAlert', 'error', 'Please select at least one session need (Q4).');
+      return;
+    }
+    if (!entrySlip.hoped_outcome) {
+      showAlert('entrySlipAlert', 'error', 'Please share what you hope will feel different (Q6).');
+      document.getElementById('entryHopedOutcome').focus();
+      return;
+    }
+
+    const btn = document.getElementById('btnEntrySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Beginning…';
+
+    const { ok, data } = await api._fetch('POST', '/api/sessions', { entry_slip: entrySlip });
+
+    btn.disabled = false;
+    btn.textContent = 'Begin Session →';
+
+    if (!ok) {
+      let msg = data.error || 'Could not start session.';
+      if (data.fields) msg = Object.values(data.fields)[0] || msg;
+      showAlert('entrySlipAlert', 'error', msg);
+      return;
+    }
+
     state.currentSessId = data.session.id;
     document.getElementById('chatMessages').innerHTML = '';
     appendBubble('system', "Welcome. This is a safe space. Take a breath, and share what's on your mind.");
@@ -1459,14 +1738,9 @@ const api = {
 
     if (data.crisis_signal) {
       showCrisisBanner();
-      appendBubble('system',
-        '🆘 We noticed something in what you shared. You are not alone.\n' +
-        'Please consider reaching out to the 988 Suicide & Crisis Lifeline (call or text 988).'
-      );
-    } else {
-      // Placeholder therapist response (replace with LLM call)
-      const response = generateTherapistResponse(content);
-      appendBubble('system', response);
+    }
+    if (data.reply) {
+      appendBubble('system', data.reply);
     }
   },
 
@@ -1476,16 +1750,65 @@ const api = {
 
   async closeSession() {
     if (!state.currentSessId) { nav('progress'); return; }
-    const postStress = parseInt(document.getElementById('postStressSlider').value);
-    const takeaway   = document.getElementById('postTakeaway').value.trim();
+    clearAlert('exitSlipAlert');
 
-    await api._fetch('POST', `/api/sessions/${state.currentSessId}/close`, {
-      post_stress: postStress,
-      takeaway,
-    });
+    const exitSlip = {
+      post_emotional_rating: parseInt(document.getElementById('exitEmotionalRating').value),
+      shift_feeling:         radio('exitShift'),
+      most_helpful:          v('exitMostHelpful'),
+      remember:              v('exitRemember'),
+      next_step:             v('exitNextStep'),
+      confidence_rating:     parseInt(document.getElementById('exitConfidenceRating').value),
+      follow_through_help:   v('exitFollowThrough'),
+      unfinished:            v('exitUnfinished'),
+    };
 
+    // Client-side validation
+    if (!exitSlip.shift_feeling) {
+      showAlert('exitSlipAlert', 'error', 'Please select how your feeling has shifted (Q2).');
+      return;
+    }
+    if (!exitSlip.most_helpful) {
+      showAlert('exitSlipAlert', 'error', 'Please share what felt most helpful (Q3).');
+      document.getElementById('exitMostHelpful').focus();
+      return;
+    }
+    if (!exitSlip.remember) {
+      showAlert('exitSlipAlert', 'error', 'Please share one thing to remember (Q4).');
+      document.getElementById('exitRemember').focus();
+      return;
+    }
+    if (!exitSlip.next_step) {
+      showAlert('exitSlipAlert', 'error', 'Please share one next step (Q5).');
+      document.getElementById('exitNextStep').focus();
+      return;
+    }
+    if (!exitSlip.follow_through_help) {
+      showAlert('exitSlipAlert', 'error', 'Please share what might help you follow through (Q7).');
+      document.getElementById('exitFollowThrough').focus();
+      return;
+    }
+
+    const btn = document.getElementById('btnExitSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Completing…';
+
+    const { ok, data } = await api._fetch(
+      'POST', `/api/sessions/${state.currentSessId}/close`, { exit_slip: exitSlip }
+    );
+
+    btn.disabled = false;
+    btn.textContent = 'Complete Session ✓';
+
+    if (!ok) {
+      let msg = data.error || 'Could not complete session.';
+      if (data.fields) msg = Object.values(data.fields)[0] || msg;
+      showAlert('exitSlipAlert', 'error', msg);
+      return;
+    }
+
+    slips.resetExit();
     state.currentSessId = null;
-    document.getElementById('postTakeaway').value = '';
     nav('progress');
   },
 
@@ -1499,10 +1822,10 @@ const api = {
   async deleteSessions() {
     const { ok, data } = await api._fetch('DELETE', '/api/account/delete-sessions');
     if (ok) {
-      alert('✓ All session chats have been permanently deleted.');
+      showToast('Session chats permanently deleted.', 'success');
       nav('progress');
     } else {
-      alert(data.error || 'Failed to delete sessions.');
+      showToast(data.error || 'Failed to delete sessions.', 'error');
     }
   },
 
@@ -1510,9 +1833,48 @@ const api = {
     const { ok, data } = await api._fetch('DELETE', '/api/account/wipe');
     state.user          = null;
     state.currentSessId = null;
-    if (ok) alert('✓ Your account has been permanently deleted.');
-    else    alert(data.error || 'Wipe failed. You have been logged out for safety.');
+    if (ok) showToast('Your account has been permanently deleted.', 'success');
+    else    showToast(data.error || 'Wipe failed. You have been logged out for safety.', 'error');
     nav('auth');
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Slip helpers
+// ═══════════════════════════════════════════════════════════════════
+const slips = {
+  // Enforce max 3 selections for Q2 feelings
+  limitFeelings(changed) {
+    const all = document.querySelectorAll('input[name="entryFeeling"]');
+    const checked = Array.from(all).filter(el => el.checked);
+    if (checked.length >= 3) {
+      all.forEach(el => { if (!el.checked) el.disabled = true; });
+    } else {
+      all.forEach(el => { el.disabled = false; });
+    }
+  },
+
+  resetEntry() {
+    document.getElementById('entryEmotionalRating').value = '5';
+    document.getElementById('entryEmotionalVal').textContent = '5';
+    document.getElementById('entryCapacityRating').value = '5';
+    document.getElementById('entryCapacityVal').textContent = '5';
+    document.querySelectorAll('input[name="entryFeeling"]').forEach(el => { el.checked = false; el.disabled = false; });
+    document.querySelectorAll('input[name="entryNeed"]').forEach(el => { el.checked = false; });
+    ['entryFeelingOther','entryHeaviest','entryNeedOther','entryHopedOutcome','entryHoldInMind']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    clearAlert('entrySlipAlert');
+  },
+
+  resetExit() {
+    document.getElementById('exitEmotionalRating').value = '5';
+    document.getElementById('exitEmotionalVal').textContent = '5';
+    document.getElementById('exitConfidenceRating').value = '5';
+    document.getElementById('exitConfidenceVal').textContent = '5';
+    document.querySelectorAll('input[name="exitShift"]').forEach(el => { el.checked = false; });
+    ['exitMostHelpful','exitRemember','exitNextStep','exitFollowThrough','exitUnfinished']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    clearAlert('exitSlipAlert');
   },
 };
 
@@ -1751,15 +2113,47 @@ const ui = {
   },
 
   confirmDeleteSessions() {
-    if (!confirm('🗑 DELETE SESSION CHATS\n\nThis will permanently delete all therapy session history, chats, and ratings.\nYour intake form and account will remain.\n\nContinue?')) return;
-    if (!confirm('FINAL CONFIRMATION\n\nDelete all session chats? This CANNOT be undone.\n\nClick OK to confirm.')) return;
-    api.deleteSessions();
+    showModal({
+      icon: '🗑️',
+      title: 'Delete Session Chats?',
+      body: 'This will permanently delete all therapy session history, chats, and ratings.<br>Your intake form and account will remain.',
+      actions: [
+        { label: 'Cancel',          cls: 'ghost',  fn: null },
+        { label: 'Delete Sessions', cls: 'danger', fn: () => {
+          showModal({
+            icon: '⚠️',
+            title: 'Are you absolutely sure?',
+            body: 'This <strong>cannot be undone</strong>. All session chats will be permanently erased.',
+            actions: [
+              { label: 'Go Back',     cls: 'ghost',  fn: null },
+              { label: 'Yes, Delete', cls: 'danger', fn: () => api.deleteSessions() },
+            ],
+          });
+        }},
+      ],
+    });
   },
 
   confirmWipeAccount() {
-    if (!confirm('⚠ WIPE ENTIRE ACCOUNT\n\nThis will permanently delete:\n• All therapy sessions and chats\n• Your intake form\n• YOUR ENTIRE ACCOUNT\n\nContinue?')) return;
-    if (!confirm('FINAL CONFIRMATION\n\nWipe your entire account?\nThis CANNOT be undone.\n\nClick OK to proceed.')) return;
-    api.wipeAccount();
+    showModal({
+      icon: '⚠️',
+      title: 'Wipe Entire Account?',
+      body: 'This will permanently delete:<br>• All therapy sessions &amp; chats<br>• Your intake form<br>• Your entire account',
+      actions: [
+        { label: 'Cancel',       cls: 'ghost',  fn: null },
+        { label: 'Wipe Account', cls: 'danger', fn: () => {
+          showModal({
+            icon: '🚨',
+            title: 'Final Confirmation',
+            body: 'Wipe your entire account? <strong>This cannot be undone.</strong>',
+            actions: [
+              { label: 'Go Back',            cls: 'ghost',  fn: null },
+              { label: 'Yes, Wipe Everything', cls: 'danger', fn: () => api.wipeAccount() },
+            ],
+          });
+        }},
+      ],
+    });
   },
 };
 
@@ -1866,11 +2260,54 @@ function esc(str) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Custom Modal & Toast
+// ═══════════════════════════════════════════════════════════════════
+function showModal({ icon, title, body, actions }) {
+  document.getElementById('modalIcon').textContent  = icon  || '';
+  document.getElementById('modalTitle').textContent = title || '';
+  document.getElementById('modalBody').innerHTML    = body  || '';
+  const actionsEl = document.getElementById('modalActions');
+  actionsEl.innerHTML = '';
+  (actions || []).forEach(({ label, cls, fn }) => {
+    const btn = document.createElement('button');
+    btn.className   = cls || 'secondary';
+    btn.textContent = label;
+    btn.onclick = () => { modalClose(); fn && fn(); };
+    actionsEl.appendChild(btn);
+  });
+  document.getElementById('customModal').classList.add('visible');
+}
+function modalClose() {
+  document.getElementById('customModal').classList.remove('visible');
+}
+
+let _toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} visible`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('visible'), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Bootstrap — restore session on page load
 // ═══════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   api.checkSession();
 });
 </script>
+<!-- ── Custom Modal ─────────────────────────────────────────────────── -->
+<div id="customModal" class="modal-overlay" onclick="modalClose()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-icon"    id="modalIcon"></div>
+    <div class="modal-title"   id="modalTitle"></div>
+    <div class="modal-body"    id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────── -->
+<div id="toast" class="toast"></div>
 </body>
 </html>

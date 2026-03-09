@@ -1,0 +1,18 @@
+# Database — contains real user data, never commit
+therapy.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# Environment variables
+.env
+*.env
