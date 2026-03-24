@@ -1,18 +1,21 @@
-# Database — contains real user data, never commit
-therapy.db
+# Environment
+.env
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
+
+# Virtual environments
 .venv/
 venv/
-*.egg-info/
+env/
 
-# IDE
+# PyCharm
 .idea/
-.vscode/
 
-# Environment variables
-.env
-*.env
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenShell - Therapy as a Service</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app-container">
+        <!-- Header with User Info and Logout -->
+        <div class="app-header" id="appHeader">
+            <div class="header-left">
+                <div class="user-info">
+                    Welcome, <strong id="headerUsername"></strong>
+                </div>
+                <!-- Privacy Trust Indicator -->
+                <div class="edge-ai-badge" title="Your conversations are sent securely to our server and processed by GPT-4.1. No data is stored server-side.">
+                    End-to-End Encrypted
+                </div>
+            </div>
+            <div class="header-controls">
+                <!-- "Right to Disappear" Feature - Two Options -->
+                <button class="delete-sessions-btn danger" onclick="confirmDeleteSessions()" title="Delete therapy session chats only">
+                    🗑️ Delete Sessions
+                </button>
+                <button class="delete-account-btn danger" onclick="confirmDeleteAccount()" title="Permanently wipe entire account">
+                    ⚠️ Wipe Account
+                </button>
+                <button class="logout-btn secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Auth View -->
+        <div id="auth-view" class="view">
+            <h1>Welcome to Therapy</h1>
+            <p class="subtitle">Your private, secure therapy space.</p>
+
+            <div class="form-group">
+                <label for="authUsername">Username</label>
+                <input type="text" id="authUsername" placeholder="Choose a username">
+            </div>
+
+            <div class="form-group">
+                <label for="authPassword">Password</label>
+                <input type="password" id="authPassword" placeholder="Enter password" oninput="updatePasswordStrength()">
+                <div id="passwordStrength" class="password-strength"></div>
+                <div id="passwordRequirements" class="password-requirements" style="display: none;">
+                    <div class="req-header">Password Requirements:</div>
+                    <div id="reqLength" class="req-item">✗ At least 10 characters</div>
+                    <div id="reqUpper" class="req-item">✗ One uppercase letter</div>
+                    <div id="reqLower" class="req-item">✗ One lowercase letter</div>
+                    <div id="reqNumber" class="req-item">✗ One number</div>
+                    <div id="reqSpecial" class="req-item">✗ One special character</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="handleLogin()">Login</button>
+                <button class="secondary" onclick="handleSignup()">Sign Up</button>
+            </div>
+
+            <div id="lockoutMessage" class="lockout-message" style="display: none;"></div>
+        </div>
+
+        <!-- Intake View -->
+        <div id="intake-view" class="view">
+            <h1>Client Intake &amp; Matching Form</h1>
+            <p class="subtitle">For Clinical Triage &amp; Psychologist Matching</p>
+
+            <div class="intake-scroll scrollbar-custom">
+                <!-- Section 1: Basic Information -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 1: Basic Information</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name <span class="required">*</span></label>
+                            <input type="text" id="fullName" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="preferredName">Preferred Name</label>
+                            <input type="text" id="preferredName">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pronouns">Pronouns <span class="required">*</span></label>
+                            <input type="text" id="pronouns" placeholder="e.g., she/her, he/him, they/them" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="dob">Date of Birth <span class="required">*</span></label>
+                            <input type="date" id="dob" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="genderIdentity">Gender Identity</label>
+                            <input type="text" id="genderIdentity">
+                        </div>
+                        <div class="form-group">
+                            <label for="sexAssigned">Sex Assigned at Birth</label>
+                            <select id="sexAssigned">
+                                <option value="">Select...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="intersex">Intersex</option>
+                                <option value="prefer-not-say">Prefer not to say</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">Phone Number <span class="required">*</span></label>
+                            <input type="tel" id="phone" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email <span class="required">*</span></label>
+                            <input type="email" id="email" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address (City/State) <span class="required">*</span></label>
+                        <input type="text" id="address" required="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emergencyContact">Emergency Contact (Name, Relationship, Phone) <span class="required">*</span></label>
+                        <input type="text" id="emergencyContact" required="">
+                    </div>
+                </div>
+
+                <!-- Section 2: Presenting Concerns -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 2: Presenting Concerns</h3>
+
+                    <div class="form-group">
+                        <label for="presenting">What brings you to therapy at this time? <span class="required">*</span></label>
+                        <textarea id="presenting" rows="4" required=""></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>How long have you been experiencing this concern? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="&lt;1month" required=""> Less than 1 month
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="1-6months"> 1–6 months
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="6-12months"> 6–12 months
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="1-5years"> 1–5 years
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="duration" value="&gt;5years"> More than 5 years
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Primary issues (check all that apply) <span class="required">*</span>:</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="anxiety"> Anxiety / Panic</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="depression"> Depression</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="trauma"> Trauma / PTSD</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="relationship"> Relationship issues</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="marriage"> Marriage / Couples</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="family"> Family conflict</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="adhd"> ADHD</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="autism"> Autism spectrum</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="substance"> Substance use</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="grief"> Grief / Loss</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="eating"> Eating concerns</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="anger"> Anger issues</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="stress"> Stress / Burnout</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="transition"> Life transition</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="career"> Career concerns</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="ocd"> OCD</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="bipolar"> Bipolar disorder</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="personality"> Personality disorder concerns</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="selfesteem"> Self-esteem issues</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="lgbtq"> LGBTQ+ related support</label>
+                            <label class="checkbox-label"><input type="checkbox" name="issues" value="cultural"> Cultural identity concerns</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="distressLevel">Current distress level (0 = no distress | 10 = worst imaginable):</label>
+                        <div class="slider-input-group">
+                            <input type="range" id="distressLevel" min="0" max="10" value="5" oninput="updateIntakeSlider('distressValue', this.value)">
+                            <span class="slider-display" id="distressValue">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Risk Assessment -->
+                <div class="intake-section risk-section">
+                    <h3 class="section-title">⚠️ Section 3: Risk Assessment (Critical for Matching)</h3>
+
+                    <div class="form-group">
+                        <label>Have you had thoughts of harming yourself in the past month? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="passive"> Yes – Passive (e.g., "wish I wasn't here")
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="active"> Yes – Active thoughts
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharm" value="plan"> Yes – With plan
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>History of suicide attempts? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="attempts" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="attempts" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="attemptsWhen" placeholder="If yes, when? (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Thoughts of harming others? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="harmOthers" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="harmOthers" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>History of self-harm? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="selfharmHistory" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="selfharmHistory" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Are you currently safe? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="currentlySafe" value="yes" required=""> Yes
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="currentlySafe" value="unsure"> Not sure
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="currentlySafe" value="no"> No
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Mental Health History -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 4: Mental Health History</h3>
+
+                    <div class="form-group">
+                        <label>Previous therapy? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="prevTherapy" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="prevTherapy" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="therapyDetails" placeholder="If yes, how long? When? (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="whatWorked">What worked well in past therapy? (required if you selected yes above)</label>
+                        <textarea id="whatWorked" rows="2" placeholder="At least 5 words if you had previous therapy"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="whatDidntWork">What did NOT work well? (required if you selected yes above)</label>
+                        <textarea id="whatDidntWork" rows="2" placeholder="At least 5 words if you had previous therapy"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prevDiagnoses">Previous diagnoses (if any):</label>
+                        <textarea id="prevDiagnoses" rows="2" placeholder="Optional"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Psychiatric hospitalizations? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="hospitalizations" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="hospitalizations" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="hospitalizationDetails" placeholder="If yes, details (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+                </div>
+
+                <!-- Section 5: Medical & Medication -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 5: Medical &amp; Medication History</h3>
+
+                    <div class="form-group">
+                        <label for="medications">Current medications (psychiatric &amp; medical):</label>
+                        <textarea id="medications" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Current psychiatrist? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="psychiatrist" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="psychiatrist" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="medicalConditions">Chronic medical conditions:</label>
+                        <textarea id="medicalConditions" rows="2" placeholder="Optional"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sleep quality: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="good" required=""> Good
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="poor"> Poor
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="insomnia"> Insomnia
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="sleep" value="oversleeping"> Oversleeping
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Substance Use -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 6: Substance Use</h3>
+
+                    <div class="form-group">
+                        <label>In the past 3 months, frequency of: <span class="required">*</span> (All required)</label>
+                        <div class="substance-table">
+                            <div class="substance-row header-row">
+                                <span>Substance</span>
+                                <span>Never</span>
+                                <span>Monthly</span>
+                                <span>Weekly</span>
+                                <span>Daily</span>
+                            </div>
+                            <div class="substance-row">
+                                <span>Alcohol</span>
+                                <label><input type="radio" name="alcohol" value="never" required=""></label>
+                                <label><input type="radio" name="alcohol" value="monthly"></label>
+                                <label><input type="radio" name="alcohol" value="weekly"></label>
+                                <label><input type="radio" name="alcohol" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Marijuana</span>
+                                <label><input type="radio" name="marijuana" value="never" required=""></label>
+                                <label><input type="radio" name="marijuana" value="monthly"></label>
+                                <label><input type="radio" name="marijuana" value="weekly"></label>
+                                <label><input type="radio" name="marijuana" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Cocaine</span>
+                                <label><input type="radio" name="cocaine" value="never" required=""></label>
+                                <label><input type="radio" name="cocaine" value="monthly"></label>
+                                <label><input type="radio" name="cocaine" value="weekly"></label>
+                                <label><input type="radio" name="cocaine" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Opioids</span>
+                                <label><input type="radio" name="opioids" value="never" required=""></label>
+                                <label><input type="radio" name="opioids" value="monthly"></label>
+                                <label><input type="radio" name="opioids" value="weekly"></label>
+                                <label><input type="radio" name="opioids" value="daily"></label>
+                            </div>
+                            <div class="substance-row">
+                                <span>Other</span>
+                                <label><input type="radio" name="otherSubstance" value="never" required=""></label>
+                                <label><input type="radio" name="otherSubstance" value="monthly"></label>
+                                <label><input type="radio" name="otherSubstance" value="weekly"></label>
+                                <label><input type="radio" name="otherSubstance" value="daily"></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="substanceConcerns">Concerns about substance use?</label>
+                        <textarea id="substanceConcerns" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 7: Trauma Screening -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 7: Trauma Screening</h3>
+
+                    <div class="form-group">
+                        <label>Have you experienced: <span class="required">*</span> (Check at least one, including "None" if applicable)</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="physical"> Physical abuse</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="sexual"> Sexual abuse</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="emotional"> Emotional abuse</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="neglect"> Neglect</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="domestic"> Domestic violence</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="combat"> Combat trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="accident"> Accident/injury trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="religious"> Religious trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="medical"> Medical trauma</label>
+                            <label class="checkbox-label"><input type="checkbox" name="trauma" value="none"> None</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Do you experience flashbacks, nightmares, or hypervigilance? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="traumaSymptoms" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="traumaSymptoms" value="yes"> Yes
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 8: Relationships -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 8: Relationships &amp; Social Support</h3>
+
+                    <div class="form-group">
+                        <label>Relationship status: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="relStatus" value="single" required=""> Single</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="partnered"> Partnered</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="married"> Married</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="divorced"> Divorced</label>
+                            <label class="radio-label"><input type="radio" name="relStatus" value="separated"> Separated</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Children? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="children" value="no" required=""> No
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="children" value="yes"> Yes
+                            </label>
+                        </div>
+                        <input type="text" id="childrenAges" placeholder="If yes, ages (required if yes selected)" style="margin-top: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="socialSupport">Quality of social support (0–10):</label>
+                        <div class="slider-input-group">
+                            <input type="range" id="socialSupport" min="0" max="10" value="5" oninput="updateIntakeSlider('socialValue', this.value)">
+                            <span class="slider-display" id="socialValue">5</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="relationalStress">Major relational stress currently?</label>
+                        <textarea id="relationalStress" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 9: Functioning -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 9: Functioning</h3>
+
+                    <div class="form-group">
+                        <label>Work/School status: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="workStatus" value="employed" required=""> Employed</label>
+                            <label class="radio-label"><input type="radio" name="workStatus" value="student"> Student</label>
+                            <label class="radio-label"><input type="radio" name="workStatus" value="unemployed"> Unemployed</label>
+                            <label class="radio-label"><input type="radio" name="workStatus" value="leave"> On leave</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Performance impacted by mental health? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="performance" value="no" required=""> No</label>
+                            <label class="radio-label"><input type="radio" name="performance" value="mild"> Mild</label>
+                            <label class="radio-label"><input type="radio" name="performance" value="moderate"> Moderate</label>
+                            <label class="radio-label"><input type="radio" name="performance" value="severe"> Severe</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Daily functioning: <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="functioning" value="independent" required=""> Independent</label>
+                            <label class="radio-label"><input type="radio" name="functioning" value="some"> Some difficulty</label>
+                            <label class="radio-label"><input type="radio" name="functioning" value="significant"> Significant impairment</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 10: Therapy Preference -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 10: Personality &amp; Therapy Preference</h3>
+
+                    <div class="form-group">
+                        <label>What type of therapist do you prefer? <span class="required">*</span> (Check at least one)</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="direct"> Direct / Structured</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="warm"> Warm / Supportive</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="insight"> Insight-oriented</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="skills"> Skills-based (CBT/DBT)</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="trauma"> Trauma-focused</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="faith"> Faith-based</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="culturally"> Culturally matched</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="lgbtq"> LGBTQ+ affirming</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapistType" value="none"> No preference</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Therapy style preference: <span class="required">*</span> (Check at least one)</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="homework"> Homework-focused</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="conversation"> Open-ended conversation</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="emotional"> Deep emotional processing</label>
+                            <label class="checkbox-label"><input type="checkbox" name="therapyStyle" value="practical"> Practical coping tools</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 11: Cultural Factors -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 11: Cultural &amp; Identity Factors</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ethnicity">Ethnicity/Race: <span class="required">*</span></label>
+                            <input type="text" id="ethnicity" required="">
+                        </div>
+                        <div class="form-group">
+                            <label for="religion">Religion/Spirituality: <span class="required">*</span></label>
+                            <input type="text" id="religion" placeholder="Can be 'None' or 'Prefer not to say'" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="culturalConsiderations">Cultural considerations important for therapist to know:</label>
+                        <textarea id="culturalConsiderations" rows="2" placeholder="Optional"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="primaryLanguage">Primary language: <span class="required">*</span></label>
+                        <input type="text" id="primaryLanguage" required="">
+                    </div>
+                </div>
+
+                <!-- Section 12: Goals -->
+                <div class="intake-section">
+                    <h3 class="section-title">Section 12: Goals for Therapy</h3>
+
+                    <div class="form-group">
+                        <label for="therapySuccess">What would success in therapy look like for you? <span class="required">*</span></label>
+                        <textarea id="therapySuccess" rows="3" placeholder="At least 10 words" required=""></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal1">Top Goal #1: <span class="required">*</span></label>
+                        <input type="text" id="goal1" placeholder="At least 3 words" required="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal2">Top Goal #2: <span class="required">*</span></label>
+                        <input type="text" id="goal2" placeholder="At least 3 words" required="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="goal3">Top Goal #3: <span class="required">*</span></label>
+                        <input type="text" id="goal3" placeholder="At least 3 words" required="">
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="completeIntake()">Submit Intake Form</button>
+                <button class="secondary" onclick="saveDraft()">Save Draft</button>
+            </div>
+        </div>
+
+        <!-- Progress/Dashboard View -->
+        <div id="progress-view" class="view">
+            <h2>Your Journey</h2>
+
+            <div class="profile-summary" id="profileSummary"></div>
+
+            <h3 style="color: var(--text-secondary); margin-bottom: 15px;">Session History</h3>
+            <div id="sessionHistory"><div class="empty-state">No sessions yet. Start your first session to begin tracking your progress.</div></div>
+
+            <div class="button-group">
+                <button onclick="startNewSession()">Start New Session</button>
+                <button class="secondary" onclick="render('intake')">Update Profile</button>
+            </div>
+        </div>
+
+        <!-- Pre-Check View -->
+        <div id="pre-check-view" class="view">
+            <h2>How are you feeling right now?</h2>
+            <p class="subtitle">Rate your current stress level</p>
+
+            <div class="slider-container">
+                <div class="slider-value" id="stressValue">5</div>
+                <input type="range" id="stressSlider" min="1" max="10" value="5" oninput="updateSliderValue('stressValue', this.value)">
+                <div class="slider-labels">
+                    <span>1 - Peaceful</span>
+                    <span>10 - Overwhelming</span>
+                </div>
+            </div>
+
+            <button onclick="enterTherapySession()">Continue to Session</button>
+        </div>
+
+        <!-- Session View -->
+        <div id="session-view" class="view">
+            <h2>Therapy Session</h2>
+
+            <div class="chat-container">
+                <div class="chat-messages scrollbar-custom" id="chatMessages"></div>
+
+                <div class="chat-input-group">
+                    <input type="text" id="chatInput" placeholder="Share your thoughts..." onkeypress="handleChatKeyPress(event)">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="endSession()">End Session</button>
+            </div>
+        </div>
+
+        <!-- Post-Check View -->
+        <div id="post-check-view" class="view">
+            <h2>How do you feel now?</h2>
+            <p class="subtitle">Let's reflect on your progress</p>
+
+            <div class="slider-container">
+                <div class="slider-value" id="resolutionValue">5</div>
+                <input type="range" id="resolutionSlider" min="1" max="10" value="5" oninput="updateSliderValue('resolutionValue', this.value)">
+                <div class="slider-labels">
+                    <span>1 - Peaceful</span>
+                    <span>10 - Overwhelming</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="takeaway">What's your key takeaway from this session?</label>
+                <textarea id="takeaway" placeholder="What insight or feeling will you carry forward?"></textarea>
+            </div>
+
+            <div class="button-group">
+                <button onclick="completeSession()">Complete Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crisis Help Button -->
+    <button class="crisis-button" onclick="showCrisisHelp()">🆘 Crisis Help</button>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
