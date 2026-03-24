@@ -1,5 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -12,6 +14,13 @@ if not _api_key:
     raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
 client = OpenAI(api_key=_api_key)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
 
 ALLOWED_ROLES = {"user", "assistant"}
 
@@ -51,6 +60,7 @@ def index():
 
 
 @app.route("/api/chat", methods=["POST"])
+@limiter.limit("30 per minute; 200 per day")
 def chat():
     data = request.get_json(silent=True)
     if not data:
