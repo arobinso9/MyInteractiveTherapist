@@ -546,6 +546,56 @@ button.danger:hover {
 }
 
 /* ============================================
+   SUBSTANCE USE TABLE
+   ============================================ */
+.substance-table {
+    border: 2px solid var(--warm-neutral-dark);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.substance-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--warm-neutral-dark);
+    gap: 8px;
+}
+
+.substance-row:last-child {
+    border-bottom: none;
+}
+
+.substance-row.header-row {
+    background: rgba(123, 140, 124, 0.1);
+    font-weight: 600;
+    font-size: 0.88em;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+}
+
+.substance-row span:first-child {
+    font-size: 0.93em;
+    color: var(--text-primary);
+}
+
+.substance-row label {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0;
+    font-weight: 400;
+}
+
+.substance-row input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--sage-primary);
+    cursor: pointer;
+}
+
+/* ============================================
    PROFILE SUMMARY (Progress View)
    ============================================ */
 .profile-summary {
