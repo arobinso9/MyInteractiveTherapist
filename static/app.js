@@ -38,32 +38,6 @@
             /^(?=.*password)(?=.*\d+)/i // Password + numbers
         ];
 
-        // Progressive lockout delays
-        const LOCKOUT_DELAYS = [
-            1 * 60 * 1000,      // 1st attempt: 1 minute
-            5 * 60 * 1000,      // 2nd attempt: 5 minutes
-            15 * 60 * 1000,     // 3rd attempt: 15 minutes
-            30 * 60 * 1000,     // 4th attempt: 30 minutes
-            60 * 60 * 1000,     // 5th attempt: 1 hour
-            24 * 60 * 60 * 1000 // 6th+ attempts: 1 day
-        ];
-
-        // ============================================
-        // SAFE-SAVE PATTERN (Atomic Updates)
-        // ============================================
-        function safeSaveUser(updatesCallback) {
-            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
-            if (!currentUser) return;
-
-            const usernameKey = currentUser.username.toLowerCase();
-            const userClone = JSON.parse(JSON.stringify(db[usernameKey])); // Deep clone
-
-            updatesCallback(userClone); // Apply updates
-
-            db[usernameKey] = userClone;
-            localStorage.setItem('zen_users_db', JSON.stringify(db));
-            currentUser = userClone; // Sync memory with storage
-        }
 
         // ============================================
         // PASSWORD SECURITY FUNCTIONS
@@ -114,13 +88,6 @@
             return false;
         }
 
-        function hasPasswordBeenUsed(username, newPassword) {
-            const user = getUserByUsername(username);
-            if (!user || !user.passwordHistory) return false;
-
-            // Check last 10 passwords
-            return user.passwordHistory.slice(-10).includes(newPassword);
-        }
 
         function updatePasswordStrength() {
             const password = document.getElementById('authPassword').value;
@@ -170,269 +137,134 @@
         }
 
         // ============================================
-        // LOCKOUT MANAGEMENT
+        // AUTH ERROR DISPLAY
         // ============================================
-        function getLoginAttempts(username) {
-            const attempts = JSON.parse(localStorage.getItem('zen_login_attempts') || '{}');
-            return attempts[username.toLowerCase()] || { count: 0, lastAttempt: null, lockedUntil: null };
+        function showAuthError(message) {
+            const el = document.getElementById('lockoutMessage');
+            el.textContent = message;
+            el.className = 'lockout-message';
+            el.style.display = 'block';
         }
 
-        function recordFailedLogin(username) {
-            const attempts = JSON.parse(localStorage.getItem('zen_login_attempts') || '{}');
-            const key = username.toLowerCase();
-
-            if (!attempts[key]) {
-                attempts[key] = { count: 0, lastAttempt: null, lockedUntil: null };
-            }
-
-            attempts[key].count++;
-            attempts[key].lastAttempt = Date.now();
-
-            // Progressive lockout: use the delay corresponding to attempt count
-            // If count exceeds array length, use the last delay (1 day)
-            const delayIndex = Math.min(attempts[key].count - 1, LOCKOUT_DELAYS.length - 1);
-            const lockoutDuration = LOCKOUT_DELAYS[delayIndex];
-
-            attempts[key].lockedUntil = Date.now() + lockoutDuration;
-
-            localStorage.setItem('zen_login_attempts', JSON.stringify(attempts));
-            return attempts[key];
+        function showAuthSuccess(message) {
+            const el = document.getElementById('lockoutMessage');
+            el.textContent = message;
+            el.className = 'success-message';
+            el.style.display = 'block';
         }
 
-        function resetLoginAttempts(username) {
-            const attempts = JSON.parse(localStorage.getItem('zen_login_attempts') || '{}');
-            const key = username.toLowerCase();
-            delete attempts[key];
-            localStorage.setItem('zen_login_attempts', JSON.stringify(attempts));
-        }
-
-        function isAccountLocked(username) {
-            const attempt = getLoginAttempts(username);
-
-            if (attempt.lockedUntil && Date.now() < attempt.lockedUntil) {
-                const remainingMs = attempt.lockedUntil - Date.now();
-                const remainingMinutes = Math.ceil(remainingMs / 60000);
-                const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
-                const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
-
-                let timeString;
-                if (remainingMs < 60 * 60 * 1000) {
-                    // Less than 1 hour: show minutes
-                    timeString = `${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`;
-                } else if (remainingMs < 24 * 60 * 60 * 1000) {
-                    // Less than 1 day: show hours
-                    timeString = `${remainingHours} hour${remainingHours > 1 ? 's' : ''}`;
-                } else {
-                    // 1 day or more: show days
-                    timeString = `${remainingDays} day${remainingDays > 1 ? 's' : ''}`;
-                }
-
-                return { locked: true, timeString, attemptCount: attempt.count };
-            }
-
-            // Lockout expired, reset
-            if (attempt.lockedUntil && Date.now() >= attempt.lockedUntil) {
-                resetLoginAttempts(username);
-            }
-
-            return { locked: false, attemptCount: attempt.count };
-        }
-
-        function showLockoutMessage(timeString, attemptCount) {
-            const msg = document.getElementById('lockoutMessage');
-            msg.style.display = 'block';
-            msg.textContent = `🔒 Account locked after ${attemptCount} failed attempt${attemptCount > 1 ? 's' : ''}. Please try again in ${timeString}.`;
-        }
-
-        function hideLockoutMessage() {
-            document.getElementById('lockoutMessage').style.display = 'none';
-        }
-
-        // ============================================
-        // DATABASE HELPERS
-        // ============================================
-        function getUserByUsername(username) {
-            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
-            const key = username.toLowerCase();
-            return db[key] || null;
-        }
-
-        function createUser(username, password) {
-            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
-            const key = username.toLowerCase();
-
-            if (db[key]) {
-                return { success: false, error: 'Username already exists' };
-            }
-
-            db[key] = {
-                username: username,
-                password: password, // In production, hash this!
-                passwordHistory: [password], // Track password history
-                hasCompletedIntake: false,
-                intakeData: null,
-                intakeDraftSaved: false,
-                sessions: [],
-                createdAt: new Date().toISOString()
-            };
-
-            localStorage.setItem('zen_users_db', JSON.stringify(db));
-            return { success: true };
-        }
-
-        function setCurrentUser(username) {
-            localStorage.setItem('zen_current_user', username);
-        }
-
-        function getCurrentUserFromStorage() {
-            return localStorage.getItem('zen_current_user');
-        }
-
-        function clearCurrentUser() {
-            localStorage.removeItem('zen_current_user');
+        function hideAuthError() {
+            const el = document.getElementById('lockoutMessage');
+            el.style.display = 'none';
+            el.textContent = '';
         }
 
         // ============================================
         // AUTH HANDLERS
         // ============================================
-        function handleLogin() {
+        async function handleLogin() {
             const username = document.getElementById('authUsername').value.trim();
             const password = document.getElementById('authPassword').value.trim();
 
-            hideLockoutMessage();
+            hideAuthError();
 
             if (!username || !password) {
-                alert('Please enter both username and password');
+                showAuthError('Please enter both username and password');
                 return;
             }
 
-            // Check if account is locked
-            const lockStatus = isAccountLocked(username);
-            if (lockStatus.locked) {
-                showLockoutMessage(lockStatus.timeString, lockStatus.attemptCount);
-                return;
-            }
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
 
-            const user = getUserByUsername(username);
-            if (!user) {
-                const attemptData = recordFailedLogin(username);
-                const nextLockStatus = isAccountLocked(username);
+                if (!res.ok) {
+                    showAuthError(data.error || 'Login failed');
+                    return;
+                }
 
-                showLockoutMessage(nextLockStatus.timeString, nextLockStatus.attemptCount);
-                return;
-            }
+                currentUser = { username, isPro: data.isPro, hasCompletedIntake: data.hasCompletedIntake };
 
-            if (user.password !== password) {
-                const attemptData = recordFailedLogin(username);
-                const nextLockStatus = isAccountLocked(username);
+                // Clear form
+                document.getElementById('authUsername').value = '';
+                document.getElementById('authPassword').value = '';
 
-                showLockoutMessage(nextLockStatus.timeString, nextLockStatus.attemptCount);
-                return;
-            }
-
-            // Successful login - reset attempts
-            resetLoginAttempts(username);
-            currentUser = user;
-            setCurrentUser(username);
-
-            // Clear form
-            document.getElementById('authUsername').value = '';
-            document.getElementById('authPassword').value = '';
-
-            // Route based on intake completion
-            if (user.hasCompletedIntake) {
-                render('progress');
-            } else {
-                render('intake');
+                render(currentUser.hasCompletedIntake ? 'progress' : 'intake');
+            } catch (err) {
+                showAuthError('Connection error. Please try again.');
             }
         }
 
-        function handleSignup() {
+        async function handleSignup() {
             const username = document.getElementById('authUsername').value.trim();
             const password = document.getElementById('authPassword').value.trim();
 
+            hideAuthError();
+
             if (!username || !password) {
-                alert('Please enter both username and password');
+                showAuthError('Please enter both username and password');
                 return;
             }
 
-            // Username validation
-            if (username.length < 3) {
-                alert('Username must be at least 3 characters');
-                return;
-            }
-
-            if (username.length > 30) {
-                alert('Username must be less than 30 characters');
+            // Client-side validation before hitting the server
+            if (username.length < 3 || username.length > 30) {
+                showAuthError('Username must be 3–30 characters');
                 return;
             }
 
             if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-                alert('Username can only contain letters, numbers, and underscores');
+                showAuthError('Username can only contain letters, numbers, and underscores');
                 return;
             }
 
-            // Password strength validation
-            const { checks, allValid } = validatePasswordStrength(password);
+            const { checks } = validatePasswordStrength(password);
+            if (!checks.length)    { showAuthError('Password must be at least 10 characters'); return; }
+            if (!checks.uppercase) { showAuthError('Password must contain an uppercase letter'); return; }
+            if (!checks.lowercase) { showAuthError('Password must contain a lowercase letter'); return; }
+            if (!checks.number)    { showAuthError('Password must contain a number'); return; }
+            if (!checks.special)   { showAuthError('Password must contain a special character'); return; }
 
-            if (!checks.length) {
-                alert('❌ Password must be at least 10 characters long');
-                return;
-            }
-
-            if (!checks.uppercase) {
-                alert('❌ Password must contain at least one uppercase letter');
-                return;
-            }
-
-            if (!checks.lowercase) {
-                alert('❌ Password must contain at least one lowercase letter');
-                return;
-            }
-
-            if (!checks.number) {
-                alert('❌ Password must contain at least one number');
-                return;
-            }
-
-            if (!checks.special) {
-                alert('❌ Password must contain at least one special character (!@#$%^&*...)');
-                return;
-            }
-
-            // Check for common passwords
             if (isCommonPassword(password)) {
-                alert('❌ This password is too common and appears in breach databases. Please choose a stronger, unique password.');
+                showAuthError('This password is too common. Please choose a stronger one.');
                 return;
             }
 
-            // Check if password contains username
             if (containsUserInfo(password, username)) {
-                alert('❌ Password cannot contain your username');
+                showAuthError('Password cannot contain your username');
                 return;
             }
 
-            // All checks passed - create user
-            const result = createUser(username, password);
-            if (!result.success) {
-                alert(result.error);
-                return;
+            try {
+                const res = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showAuthError(data.error || 'Signup failed');
+                    return;
+                }
+
+                showAuthSuccess('Account created! Please log in.');
+                document.getElementById('authPassword').value = '';
+                updatePasswordStrength();
+            } catch (err) {
+                showAuthError('Connection error. Please try again.');
             }
-
-            alert('✅ Account created successfully! Please login with your credentials.');
-
-            // Clear password field
-            document.getElementById('authPassword').value = '';
-            updatePasswordStrength();
         }
 
-        function logout() {
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+            } catch (_) { /* ignore network errors — log out locally regardless */ }
             currentUser = null;
-            clearCurrentUser();
-            tempSessionData = {
-                initialStress: 5,
-                chatHistory: []
-            };
+            sessionStorage.removeItem('activeSessionId');
+            tempSessionData = { initialStress: 5, chatHistory: [] };
             render('auth');
         }
 
@@ -466,12 +298,19 @@
             }
         }
 
-        function deleteSessionsOnly() {
+        async function deleteSessionsOnly() {
             if (!currentUser) return;
 
-            safeSaveUser(user => {
-                user.sessions = [];
-            });
+            try {
+                const res = await fetch('/api/sessions', { method: 'DELETE' });
+                if (!res.ok) {
+                    alert('❌ Could not delete sessions. Please try again.');
+                    return;
+                }
+            } catch (_) {
+                alert('❌ Connection error. Sessions not deleted.');
+                return;
+            }
 
             alert(
                 "✓ Sessions Deleted\n\n" +
@@ -479,11 +318,8 @@
                 "Your intake form and account remain intact."
             );
 
-            tempSessionData = {
-                initialStress: 5,
-                chatHistory: []
-            };
-
+            sessionStorage.removeItem('activeSessionId');
+            tempSessionData = { initialStress: 5, chatHistory: [] };
             render('progress');
         }
 
@@ -515,15 +351,19 @@
             }
         }
 
-        function wipeAccount() {
+        async function wipeAccount() {
             if (!currentUser) return;
 
-            const username = currentUser.username.toLowerCase();
-            const db = JSON.parse(localStorage.getItem('zen_users_db') || '{}');
-
-            // Completely remove user from database
-            delete db[username];
-            localStorage.setItem('zen_users_db', JSON.stringify(db));
+            try {
+                const res = await fetch('/api/account', { method: 'DELETE' });
+                if (!res.ok) {
+                    alert('❌ Could not delete account. Please try again.');
+                    return;
+                }
+            } catch (_) {
+                alert('❌ Connection error. Account not deleted.');
+                return;
+            }
 
             alert(
                 "✓ Account Wiped\n\n" +
@@ -532,14 +372,9 @@
                 "You can create a new account if desired."
             );
 
-            // Logout and clear everything
             currentUser = null;
-            clearCurrentUser();
-            tempSessionData = {
-                initialStress: 5,
-                chatHistory: []
-            };
-
+            sessionStorage.removeItem('activeSessionId');
+            tempSessionData = { initialStress: 5, chatHistory: [] };
             render('auth');
         }
 
@@ -578,7 +413,7 @@
                 document.getElementById('authPassword').value = '';
                 document.getElementById('passwordStrength').innerHTML = '';
                 document.getElementById('passwordRequirements').style.display = 'none';
-                hideLockoutMessage();
+                hideAuthError();
             }
 
             // View-specific rendering
@@ -623,10 +458,21 @@
         // ============================================
         // INTAKE FORM
         // ============================================
-        function loadIntakeForm() {
-            if (!currentUser || !currentUser.intakeData) return;
+        async function loadIntakeForm() {
+            const banner = document.getElementById('intakeLoadingBanner');
+            if (banner) banner.style.display = 'flex';
 
-            const intake = currentUser.intakeData;
+            let intake;
+            try {
+                const res = await fetch('/api/intake');
+                if (res.ok) {
+                    const data = await res.json();
+                    intake = data.data;
+                }
+            } catch (_) { /* no draft saved yet — leave form blank */ }
+
+            if (banner) banner.style.display = 'none';
+            if (!intake) return;
 
             // Section 1: Basic Information
             document.getElementById('fullName').value = intake.fullName || '';
@@ -821,7 +667,7 @@
             return text && text.trim().length >= minLength;
         }
 
-        function completeIntake() {
+        async function completeIntake() {
             const intakeData = collectIntakeData();
             const errors = [];
 
@@ -1058,40 +904,64 @@
                 return;
             }
 
-            // All validation passed - save
-            safeSaveUser((user) => {
-                user.hasCompletedIntake = true;
-                user.intakeData = intakeData;
-                user.intakeCompletedAt = new Date().toISOString();
-            });
+            // All validation passed — save to backend
+            try {
+                const res = await fetch('/api/intake', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: intakeData, completed: true })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert('❌ Could not save intake: ' + (err.error || 'Server error'));
+                    return;
+                }
+            } catch (_) {
+                alert('❌ Connection error. Please check your internet and try again.');
+                return;
+            }
 
+            if (currentUser) currentUser.hasCompletedIntake = true;
             alert('✅ Intake form submitted successfully!\n\nAll required information has been validated and saved.');
             render('progress');
         }
 
-        function saveDraft() {
+        async function saveDraft() {
             const intakeData = collectIntakeData();
-
-            // Safe-save pattern
-            safeSaveUser((user) => {
-                user.intakeData = intakeData;
-                user.intakeDraftSaved = true;
-            });
-
-            alert('✅ Draft saved! You can continue later.');
+            try {
+                const res = await fetch('/api/intake', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: intakeData, completed: false })
+                });
+                if (!res.ok) {
+                    alert('❌ Could not save draft. Please try again.');
+                    return;
+                }
+            } catch (_) {
+                alert('❌ Connection error. Draft not saved.');
+                return;
+            }
+            alert('✅ Draft saved! You can continue later from any device.');
         }
 
         // ============================================
         // PROGRESS/DASHBOARD VIEW
         // ============================================
-        function renderProfileSummary() {
-            if (!currentUser || !currentUser.intakeData) {
-                document.getElementById('profileSummary').innerHTML = '<p style="text-align: center; opacity: 0.7;">Complete your intake form to see your profile summary.</p>';
+        async function renderProfileSummary() {
+            const container = document.getElementById('profileSummary');
+            if (!currentUser) return;
+
+            let intake;
+            try {
+                const res = await fetch('/api/intake');
+                if (res.ok) intake = (await res.json()).data;
+            } catch (_) {}
+
+            if (!intake) {
+                container.innerHTML = '<p style="text-align: center; opacity: 0.7;">Complete your intake form to see your profile summary.</p>';
                 return;
             }
-
-            const container = document.getElementById('profileSummary');
-            const intake = currentUser.intakeData;
 
             // Calculate age from DOB
             let age = '';
@@ -1121,24 +991,24 @@
             `;
         }
 
-        function renderSessionHistory() {
+        async function renderSessionHistory() {
             if (!currentUser) return;
 
             const container = document.getElementById('sessionHistory');
-            const sessions = currentUser.sessions || [];
+
+            let sessions = [];
+            try {
+                const res = await fetch('/api/sessions');
+                if (res.ok) sessions = await res.json();
+            } catch (_) {}
 
             if (sessions.length === 0) {
                 container.innerHTML = '<div class="empty-state">No sessions yet. Start your first session to begin tracking your progress.</div>';
                 return;
             }
 
-            // Sort by most recent first
-            const sortedSessions = [...sessions].sort((a, b) =>
-                new Date(b.timestamp) - new Date(a.timestamp)
-            );
-
-            container.innerHTML = sortedSessions.map(session => {
-                const date = new Date(session.timestamp);
+            container.innerHTML = sessions.map(session => {
+                const date = new Date(session.startedAt);
                 const formattedDate = date.toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
@@ -1147,12 +1017,13 @@
                     minute: '2-digit'
                 });
 
-                const improvement = session.initialStress - session.finalStress;
-                const improvementText = improvement > 0
-                    ? `↓ ${improvement} (Improved)`
-                    : improvement < 0
-                    ? `↑ ${Math.abs(improvement)} (Increased)`
-                    : '→ 0 (Stable)';
+                const initial = session.initialMood ?? '—';
+                const final = session.finalMood ?? '—';
+                let improvementText = '→ In progress';
+                if (session.initialMood != null && session.finalMood != null) {
+                    const diff = session.initialMood - session.finalMood;
+                    improvementText = diff > 0 ? `↓ ${diff} (Improved)` : diff < 0 ? `↑ ${Math.abs(diff)} (Increased)` : '→ 0 (Stable)';
+                }
 
                 const card = document.createElement('div');
                 card.className = 'session-card';
@@ -1173,17 +1044,26 @@
                 const indicator = document.createElement('div');
                 indicator.className = 'stress-indicator';
                 indicator.innerHTML = `
-                    <span>Initial: <span class="stress-value">${session.initialStress}/10</span></span>
-                    <span>Final: <span class="stress-value">${session.finalStress}/10</span></span>
+                    <span>Initial: <span class="stress-value">${initial}/10</span></span>
+                    <span>Final: <span class="stress-value">${final}/10</span></span>
                 `;
-
-                const takeaway = document.createElement('div');
-                takeaway.className = 'takeaway';
-                takeaway.textContent = `"${session.takeaway}"`;
 
                 card.appendChild(header);
                 card.appendChild(indicator);
-                card.appendChild(takeaway);
+
+                if (session.takeaway) {
+                    const takeaway = document.createElement('div');
+                    takeaway.className = 'takeaway';
+                    takeaway.textContent = `"${session.takeaway}"`;
+                    card.appendChild(takeaway);
+                }
+
+                if (session.summary) {
+                    const summary = document.createElement('div');
+                    summary.className = 'session-summary';
+                    summary.textContent = session.summary;
+                    card.appendChild(summary);
+                }
 
                 return card.outerHTML;
             }).join('');
@@ -1193,10 +1073,8 @@
         // SESSION FLOW
         // ============================================
         function startNewSession() {
-            tempSessionData = {
-                initialStress: 5,
-                chatHistory: []
-            };
+            sessionStorage.removeItem('activeSessionId');
+            tempSessionData = { initialStress: 5, chatHistory: [] };
             document.getElementById('stressSlider').value = 5;
             updateSliderValue('stressValue', 5);
             render('pre-check');
@@ -1206,22 +1084,29 @@
             document.getElementById(elementId).textContent = value;
         }
 
-        function enterTherapySession() {
+        async function enterTherapySession() {
             tempSessionData.initialStress = parseInt(document.getElementById('stressSlider').value);
 
-            // Get name and presenting concern from intake
-            const name = currentUser.intakeData?.preferredName || currentUser.intakeData?.fullName || 'there';
-            const concern = currentUser.intakeData?.presenting || 'your concerns';
+            // Create session in DB and store the returned sessionId
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initialMood: tempSessionData.initialStress })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    tempSessionData.sessionId = data.sessionId;
+                    sessionStorage.setItem('activeSessionId', data.sessionId);
+                }
+            } catch (_) { /* session will work; messages just won't persist */ }
 
-            // Initialize chat with welcome message
-            const welcomeMessage = {
+            const name = currentUser.username || 'there';
+            tempSessionData.chatHistory = [{
                 type: 'therapist',
-                text: `Hello ${name}, I'm here to listen. You mentioned: "${concern}". How does that make you feel?`
-            };
-
-            tempSessionData.chatHistory = [welcomeMessage];
+                text: `Hello ${name}, I'm here to listen. What would you like to talk about today?`
+            }];
             renderChatMessages();
-
             render('session');
         }
 
@@ -1253,8 +1138,6 @@
         // CHAT API
         // ============================================
         async function callChatAPI(userText) {
-            const intake = currentUser.intakeData || {};
-
             const history = tempSessionData.chatHistory
                 .filter(m => m.type === 'user' || m.type === 'therapist')
                 .map(m => ({
@@ -1265,7 +1148,11 @@
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ intake, history, message: userText })
+                body: JSON.stringify({
+                    message: userText,
+                    history,
+                    sessionId: tempSessionData.sessionId || null
+                })
             });
 
             const data = await response.json();
@@ -1299,7 +1186,7 @@
                 tempSessionData.chatHistory.pop(); // remove thinking
                 tempSessionData.chatHistory.push({
                     type: 'therapist',
-                    text: 'I'm having trouble connecting right now. Please check your connection and try again.'
+                    text: "I'm having trouble connecting right now. Please check your connection and try again."
                 });
             } finally {
                 input.disabled = false;
@@ -1319,7 +1206,7 @@
         // ============================================
         // COMPLETE SESSION & SAVE
         // ============================================
-        function completeSession() {
+        async function completeSession() {
             const finalStress = parseInt(document.getElementById('resolutionSlider').value);
             const takeaway = document.getElementById('takeaway').value.trim();
 
@@ -1328,28 +1215,18 @@
                 return;
             }
 
-            // Create session record
-            const session = {
-                timestamp: new Date().toISOString(),
-                initialStress: tempSessionData.initialStress,
-                finalStress: finalStress,
-                takeaway: takeaway
-            };
+            if (tempSessionData.sessionId) {
+                try {
+                    await fetch(`/api/sessions/${tempSessionData.sessionId}/complete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ finalMood: finalStress, whatWorked: takeaway })
+                    });
+                } catch (_) { /* best-effort — still navigate to progress */ }
+            }
 
-            // Safe-save pattern
-            safeSaveUser((user) => {
-                if (!user.sessions) {
-                    user.sessions = [];
-                }
-                user.sessions.push(session);
-            });
-
-            // Reset temp data
-            tempSessionData = {
-                initialStress: 5,
-                chatHistory: []
-            };
-
+            sessionStorage.removeItem('activeSessionId');
+            tempSessionData = { initialStress: 5, chatHistory: [] };
             render('progress');
         }
 
@@ -1375,24 +1252,49 @@ You are not alone. Help is available 24/7.`);
         // ============================================
         // INITIALIZATION
         // ============================================
-        window.addEventListener('load', () => {
-            const storedUsername = getCurrentUserFromStorage();
-
-            if (storedUsername) {
-                const user = getUserByUsername(storedUsername);
-                if (user) {
-                    currentUser = user;
-                    console.log(`Welcome back, ${currentUser.username}!`);
-
-                    if (user.hasCompletedIntake) {
-                        render('progress');
-                    } else {
-                        render('intake');
+        window.addEventListener('load', async () => {
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = { username: data.username, isPro: data.isPro, hasCompletedIntake: data.hasCompletedIntake };
+                    // Restore in-progress session across refreshes
+                    const savedSessionId = sessionStorage.getItem('activeSessionId');
+                    if (savedSessionId) {
+                        try {
+                            const sRes = await fetch(`/api/sessions/${savedSessionId}`);
+                            if (sRes.ok) {
+                                const sData = await sRes.json();
+                                if (!sData.completedAt) {
+                                    // Session is still active — restore it
+                                    tempSessionData.sessionId = sData.id;
+                                    tempSessionData.initialStress = sData.initialMood ?? 5;
+                                    tempSessionData.chatHistory = sData.messages.map(m => ({
+                                        type: m.role === 'user' ? 'user' : 'therapist',
+                                        text: m.content
+                                    }));
+                                    renderChatMessages();
+                                    render('session');
+                                    return;
+                                } else {
+                                    // Session was already completed — clear stale sessionStorage
+                                    sessionStorage.removeItem('activeSessionId');
+                                }
+                            } else {
+                                sessionStorage.removeItem('activeSessionId');
+                            }
+                        } catch (_) {
+                            sessionStorage.removeItem('activeSessionId');
+                        }
                     }
-                    return;
+                    render(currentUser.hasCompletedIntake ? 'progress' : 'intake');
+                } else {
+                    render('auth');
                 }
+            } catch (_) {
+                render('auth');
+            } finally {
+                const overlay = document.getElementById('app-loading-overlay');
+                if (overlay) overlay.style.display = 'none';
             }
-
-            // No stored user, show auth
-            render('auth');
         });

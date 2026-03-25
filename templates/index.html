@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+
+<!-- Loading overlay — visible immediately on page paint, hidden once /api/me responds -->
+<div id="app-loading-overlay">
+    <div class="spinner"></div>
+</div>
+
 <div class="app-container">
         <!-- Header with User Info and Logout -->
         <div class="app-header" id="appHeader">
@@ -70,6 +76,10 @@
         <div id="intake-view" class="view">
             <h1>Client Intake &amp; Matching Form</h1>
             <p class="subtitle">For Clinical Triage &amp; Psychologist Matching</p>
+
+            <div id="intakeLoadingBanner" style="display:none;">
+                <span>Restoring your saved answers…</span>
+            </div>
 
             <div class="intake-scroll scrollbar-custom">
                 <!-- Section 1: Basic Information -->
