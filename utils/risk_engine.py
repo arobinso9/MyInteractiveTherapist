@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime, timezone, timedelta
 from models import db, UserRiskState, SafetyAlert
+
+log = logging.getLogger(__name__)
 
 WARNING_TEXT = (
     "I want to gently pause here. Please try not to use unclear or joking language about "
@@ -95,21 +98,26 @@ def _warning_throttled(state: UserRiskState) -> bool:
 # ── Notification stubs (issue #8 — idempotent) ────────────────────────────────
 def _notify_emergency_contact(user, alert: SafetyAlert, state: UserRiskState):
     """
-    TODO: wire up SendGrid (email) + Twilio (SMS) in the next task.
-    Idempotent — only fires if emergency_protocol_activated is not already set.
+    Dispatch emergency alert to guardian via SMS + email.
+    Idempotent — skips if emergency_protocol_activated is already set.
     """
     if state.emergency_protocol_activated:
-        return   # already notified — do not send duplicate
-
-    guardian = getattr(user, "guardian", None)
-    if not guardian:
         return
 
-    # Stub — replace with real send in notifications task
-    print(
-        f"[NOTIFY] Emergency contact for user {user.id} — "
-        f"guardian: {guardian.email} | severity: {alert.severity_level}"
-    )
+    if not getattr(user, "guardian", None):
+        log.info("_notify_emergency_contact skipped user=%s — no guardian", user.id)
+        return
+
+    if alert is None:
+        log.warning("_notify_emergency_contact called with no alert user=%s", user.id)
+        return
+
+    try:
+        from services.emergency_alerts import trigger_emergency_alert
+        trigger_emergency_alert(user, alert, alert.session_id)
+        log.info("_notify_emergency_contact dispatched user=%s alert=%s", user.id, alert.id)
+    except Exception as exc:
+        log.error("_notify_emergency_contact failed user=%s: %s", user.id, exc)
 
 
 # ── Policy engine ──────────────────────────────────────────────────────────────
