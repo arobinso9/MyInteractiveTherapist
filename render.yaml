@@ -13,6 +13,10 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: SECURITY_PASSWORD_SALT
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
 
 databases:
   - name: zenshell-db
