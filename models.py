@@ -39,23 +39,11 @@ class User(db.Model, UserMixin):
     roles         = db.relationship("Role", secondary=user_roles, backref=db.backref("users", lazy="dynamic"))
 
     intake              = db.relationship("IntakeProfile",     backref="user", uselist=False, cascade="all, delete-orphan")
-    guardian            = db.relationship("GuardianProfile",   backref="user", uselist=False, cascade="all, delete-orphan")
     sessions            = db.relationship("TherapySession",    backref="user", lazy=True,     cascade="all, delete-orphan")
     assignments         = db.relationship("Assignment",        backref="user", lazy=True,     cascade="all, delete-orphan")
     journal_entries     = db.relationship("JournalEntry",      backref="user", lazy=True,     cascade="all, delete-orphan")
     safety_alerts       = db.relationship("SafetyAlert",       backref="user", lazy=True,     cascade="all, delete-orphan")
     analytics_snapshots = db.relationship("AnalyticsSnapshot", backref="user", lazy=True,     cascade="all, delete-orphan")
-
-
-class GuardianProfile(db.Model):
-    __tablename__ = "guardian_profiles"
-    id                = db.Column(db.Integer, primary_key=True)
-    user_id           = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    name              = db.Column(db.String(100))
-    email             = db.Column(db.String(120))
-    phone             = db.Column(db.String(30), nullable=True)   # E.164 format, e.g. +15551234567
-    relationship      = db.Column(db.String(50))
-    alert_preferences = db.Column(db.JSON)
 
 
 class IntakeProfile(db.Model):
@@ -80,9 +68,12 @@ class TherapySession(db.Model):
     feelings_post       = db.Column(db.Text)
     modality_used       = db.Column(db.String(20))
     effectiveness_score = db.Column(db.Float)
-    summary             = db.Column(db.Text)
-    brief_summary       = db.Column(db.Text)   # 2-3 bullet points for older session context
-    embedding           = db.Column(db.Text)
+    summary                  = db.Column(db.Text)
+    brief_summary            = db.Column(db.Text)   # 2-3 bullet points for older session context
+    next_session_goal        = db.Column(db.Text)   # set at session end — asked about in the NEXT session
+    prior_goal_followthrough = db.Column(db.String(20))  # yes | partial | no | skipped — answered at start of THIS session
+    prior_goal_note          = db.Column(db.Text)   # optional context the user typed on pre-check
+    embedding                = db.Column(db.Text)
 
     messages = db.relationship("ChatMessage", backref="session", lazy=True, cascade="all, delete-orphan")
     alerts   = db.relationship("SafetyAlert", backref="session", lazy=True, cascade="all, delete-orphan")
@@ -140,47 +131,6 @@ class AnalyticsSnapshot(db.Model):
     data       = db.Column(db.JSON)
 
 
-class EmergencyAlert(db.Model):
-    __tablename__ = "emergency_alerts"
-    id                  = db.Column(db.Integer, primary_key=True)
-    user_id             = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    session_id          = db.Column(db.Integer, db.ForeignKey("therapy_sessions.id"), nullable=True)
-    message_id          = db.Column(db.String(64), nullable=True)   # SafetyAlert.id stringified
-    idempotency_key     = db.Column(db.String(200), unique=True, nullable=False, index=True)
-    # Overall status: DISPATCHING | SENT | PARTIALLY_SENT | FAILED
-    status              = db.Column(db.String(20), default="DISPATCHING", nullable=False)
-    # Per-channel statuses: PENDING | IN_FLIGHT | DELIVERED | FAILED | SKIPPED
-    sms_status          = db.Column(db.String(20), default="PENDING", nullable=False)
-    email_status        = db.Column(db.String(20), default="PENDING", nullable=False)
-    sms_provider_id     = db.Column(db.String(100), nullable=True)   # Twilio Message SID
-    email_provider_id   = db.Column(db.String(100), nullable=True)   # SendGrid X-Message-Id
-    sms_attempt_count   = db.Column(db.Integer, default=0, nullable=False)
-    email_attempt_count = db.Column(db.Integer, default=0, nullable=False)
-    sms_last_error      = db.Column(db.Text, nullable=True)
-    email_last_error    = db.Column(db.Text, nullable=True)
-    first_triggered_at  = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    last_attempt_at     = db.Column(db.DateTime, nullable=True)
-    completed_at        = db.Column(db.DateTime, nullable=True)
-    # Immutable snapshot of user/guardian contact info at alert creation time
-    payload_snapshot    = db.Column(db.JSON, nullable=True)
-
-    webhook_events = db.relationship("ProviderWebhookEvent", backref="alert", lazy=True)
-
-
-class ProviderWebhookEvent(db.Model):
-    __tablename__ = "provider_webhook_events"
-    id                = db.Column(db.Integer, primary_key=True)
-    provider          = db.Column(db.String(20), nullable=False)        # "twilio" | "sendgrid"
-    provider_event_id = db.Column(db.String(200), nullable=False)       # unique per provider
-    alert_id          = db.Column(db.Integer, db.ForeignKey("emergency_alerts.id"), nullable=True)
-    raw_payload       = db.Column(db.JSON, nullable=True)
-    received_at       = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-
-    __table_args__ = (
-        db.UniqueConstraint("provider", "provider_event_id", name="uq_provider_event"),
-    )
-
-
 class UserRiskState(db.Model):
     __tablename__ = "user_risk_states"
     id                          = db.Column(db.Integer, primary_key=True)
@@ -192,7 +142,6 @@ class UserRiskState(db.Model):
     last_risk_level             = db.Column(db.String(30), nullable=True)
     trend                       = db.Column(db.String(10), default="NONE")   # NONE / MILD / MODERATE / SEVERE
     human_review_queued         = db.Column(db.Boolean, default=False)
-    emergency_protocol_activated = db.Column(db.Boolean, default=False)
     updated_at                  = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("risk_state", uselist=False))

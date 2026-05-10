@@ -14,7 +14,7 @@ def get_intake():
         return jsonify({"error": "No intake found"}), 404
     return jsonify({
         "data": current_user.intake.data,
-        "completedAt": current_user.intake.completed_at.isoformat() if current_user.intake.completed_at else None
+        "completedAt": (current_user.intake.completed_at.isoformat() + "Z") if current_user.intake.completed_at else None
     }), 200
 
 

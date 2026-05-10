@@ -21,7 +21,7 @@ def get_reports():
     avg_improvement = round(avg_initial - avg_final, 1) if avg_initial is not None and avg_final is not None else None
 
     mood_trend = [{
-        "date":        s.started_at.isoformat(),
+        "date":        s.started_at.isoformat() + "Z",
         "initialMood": s.initial_mood,
         "finalMood":   s.final_mood
     } for s in sessions]

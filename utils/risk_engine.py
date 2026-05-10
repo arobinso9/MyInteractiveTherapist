@@ -19,8 +19,9 @@ CRISIS_RESPONSE = (
     "You don't have to face this alone. Please contact one of these resources now."
 )
 
-VALID_RISK_LEVELS      = {"CLEAR_IMMEDIATE_RISK", "POSSIBLE_HARM"}
+VALID_RISK_LEVELS      = {"NO_RISK", "CLEAR_IMMEDIATE_RISK", "POSSIBLE_HARM"}
 VALID_ACTIONS          = {
+    "NO_ACTION",
     "IMMEDIATE_EMERGENCY_ACTION",
     "FLAG_AND_WARN",
     "FLAG_AND_MONITOR",
@@ -95,31 +96,6 @@ def _warning_throttled(state: UserRiskState) -> bool:
     return (now - last) < timedelta(minutes=10)
 
 
-# ── Notification stubs (issue #8 — idempotent) ────────────────────────────────
-def _notify_emergency_contact(user, alert: SafetyAlert, state: UserRiskState):
-    """
-    Dispatch emergency alert to guardian via SMS + email.
-    Idempotent — skips if emergency_protocol_activated is already set.
-    """
-    if state.emergency_protocol_activated:
-        return
-
-    if not getattr(user, "guardian", None):
-        log.info("_notify_emergency_contact skipped user=%s — no guardian", user.id)
-        return
-
-    if alert is None:
-        log.warning("_notify_emergency_contact called with no alert user=%s", user.id)
-        return
-
-    try:
-        from services.emergency_alerts import trigger_emergency_alert
-        trigger_emergency_alert(user, alert, alert.session_id)
-        log.info("_notify_emergency_contact dispatched user=%s alert=%s", user.id, alert.id)
-    except Exception as exc:
-        log.error("_notify_emergency_contact failed user=%s: %s", user.id, exc)
-
-
 # ── Policy engine ──────────────────────────────────────────────────────────────
 def run_policy(user, triage: dict, session_id) -> dict:
     """
@@ -148,9 +124,23 @@ def run_policy(user, triage: dict, session_id) -> dict:
     state = _get_or_create_risk_state(user.id)
     _decay_counts(state)
 
-    # ── Log SafetyAlert for every non-normal event ─────────────────────────────
+    # ── NO_RISK short-circuit — no alert, no warning, NORMAL mode ─────────────
+    if risk_level == "NO_RISK":
+        state.last_risk_level = "NO_RISK"
+        state.trend           = _decay_trend(state)
+        db.session.commit()
+        return {
+            "safety_mode":     "NORMAL",
+            "show_warning":    False,
+            "warning_text":    None,
+            "block_therapy":   False,
+            "crisis_response": None,
+            "alert_id":        None,
+        }
+
+    # ── Log SafetyAlert for every concerning event ─────────────────────────────
     alert = None
-    if risk_level in VALID_RISK_LEVELS:
+    if risk_level in ("CLEAR_IMMEDIATE_RISK", "POSSIBLE_HARM"):
         severity = "CRITICAL" if risk_level == "CLEAR_IMMEDIATE_RISK" else "MEDIUM"
         alert = SafetyAlert(
             user_id=user.id,
@@ -168,8 +158,6 @@ def run_policy(user, triage: dict, session_id) -> dict:
         state.trend           = "SEVERE"   # always max on confirmed crisis
         if alert:
             alert.notified_at = datetime.now(timezone.utc)
-        _notify_emergency_contact(user, alert, state)  # idempotent
-        state.emergency_protocol_activated = True
         db.session.commit()
         return {
             "safety_mode":     "CRISIS",
@@ -210,13 +198,11 @@ def run_policy(user, triage: dict, session_id) -> dict:
             state.prior_warning_shown = True
             state.last_warning_at     = datetime.now(timezone.utc)
 
-    # Route E: threshold crossed mid-session (issue #8 — idempotent)
+    # Route E: threshold crossed mid-session
     if action == "IMMEDIATE_EMERGENCY_ACTION":
         if alert:
             alert.severity_level = "CRITICAL"
             alert.notified_at    = datetime.now(timezone.utc)
-        _notify_emergency_contact(user, alert, state)  # idempotent
-        state.emergency_protocol_activated = True
         db.session.commit()
         return {
             "safety_mode":     "CRISIS",

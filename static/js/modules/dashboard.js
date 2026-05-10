@@ -53,8 +53,10 @@ export async function renderSessionHistory() {
         const final         = session.finalMood   ?? '—';
         let improvementText = '→ In progress';
         if (session.initialMood != null && session.finalMood != null) {
-            const diff      = session.initialMood - session.finalMood;
-            improvementText = diff > 0 ? `↓ ${diff} (Improved)` : diff < 0 ? `↑ ${Math.abs(diff)} (Increased)` : '→ 0 (Stable)';
+            const diff = session.initialMood - session.finalMood;
+            if (diff > 0)      improvementText = `↓ Felt better (stress -${diff})`;
+            else if (diff < 0) improvementText = `↑ Felt worse (stress +${Math.abs(diff)})`;
+            else               improvementText = `→ No change`;
         }
 
         return `

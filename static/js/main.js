@@ -2,8 +2,8 @@ import { handleLogin, handleSignup, logout, updatePasswordStrength, hideAuthErro
 import { confirmDeleteSessions, confirmDeleteAccount } from './modules/account.js';
 import { loadIntakeForm, completeIntake, saveDraft, updateIntakeSlider } from './modules/intake.js';
 import { renderProfileSummary, renderSessionHistory } from './modules/dashboard.js';
-import { startNewSession, enterTherapySession, endSession, completeSession, renderChatMessages, handleChatKeyPress, sendMessage, updateSliderValue } from './modules/session.js';
-import { showCrisisHelp } from './modules/crisis.js';
+import { startNewSession, enterTherapySession, endSession, completeSession, renderChatMessages, handleChatKeyPress, sendMessage, updateSliderValue, continueToPostCheck, skipGoalAndContinue } from './modules/session.js';
+import { showCrisisHelp, closeCrisisModal } from './modules/crisis.js';
 
 // ============================================
 // GLOBAL STATE
@@ -110,10 +110,13 @@ window.updateIntakeSlider = updateIntakeSlider;
 window.startNewSession  = () => startNewSession(render);
 window.enterTherapySession = () => enterTherapySession(render);
 window.endSession       = () => endSession(render);
+window.continueToPostCheck = () => continueToPostCheck(render);
+window.skipGoalAndContinue = () => skipGoalAndContinue(render);
 window.completeSession  = () => completeSession(render);
 window.updateSliderValue = updateSliderValue;
 window.handleChatKeyPress = handleChatKeyPress;
 window.sendMessage      = sendMessage;
 
-window.showCrisisHelp   = showCrisisHelp;
-window.render           = render;
+window.showCrisisHelp    = showCrisisHelp;
+window.closeCrisisModal  = closeCrisisModal;
+window.render            = render;

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_security import auth_required, current_user
@@ -10,14 +11,21 @@ from extensions import limiter
 
 MAX_SAFETY_RETRIES = 3
 
+# Sync safety net: if a reply contains any of these, the popup fires regardless of triage verdict
+_HOTLINE_KEYWORDS = re.compile(
+    r"\b(988|741741|crisis text line|crisis lifeline|suicide.{0,5}crisis lifeline|findahelpline)\b",
+    re.IGNORECASE,
+)
+
 SAFE_FALLBACK_MESSAGE = (
     "I want to respond carefully to what you shared. "
     "If this situation feels serious or urgent, please let me know clearly. "
     "You can also tell me more about what's going on right now."
 )
 
-_VALID_TRIAGE_RISK_LEVELS = {"CLEAR_IMMEDIATE_RISK", "POSSIBLE_HARM"}
+_VALID_TRIAGE_RISK_LEVELS = {"NO_RISK", "CLEAR_IMMEDIATE_RISK", "POSSIBLE_HARM"}
 _VALID_TRIAGE_ACTIONS     = {
+    "NO_ACTION",
     "IMMEDIATE_EMERGENCY_ACTION",
     "FLAG_AND_WARN",
     "FLAG_AND_MONITOR",
@@ -39,6 +47,7 @@ def chat():
 
     session_id   = data.get("sessionId")
     user_message = data.get("message", "").strip()
+    wrap_up_mode = bool(data.get("wrapUp"))
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
@@ -115,6 +124,23 @@ def chat():
     older  = list(reversed(all_past[10:]))
 
     past_context = ""
+
+    # Prior session's goal (if any) — surfaces to the AI so it can ask about progress
+    prior_goal_session = all_past[0] if all_past else None
+    if prior_goal_session and prior_goal_session.next_session_goal:
+        past_context += (
+            f"\n\nGoal set at end of last session ({prior_goal_session.started_at.strftime('%b %d, %Y')}): "
+            f"\"{prior_goal_session.next_session_goal}\""
+        )
+
+    # User's pre-check answer about that prior goal (filled in on the pre-check screen)
+    if therapy_session and therapy_session.prior_goal_followthrough:
+        ft = therapy_session.prior_goal_followthrough
+        note = therapy_session.prior_goal_note
+        past_context += f"\n\nClient's pre-check answer about that goal: {ft}"
+        if note:
+            past_context += f" — they added: \"{note}\""
+
     if recent:
         recent_block = "\n".join(
             f"- {s.started_at.strftime('%b %d, %Y')}: {s.summary}"
@@ -146,10 +172,65 @@ def chat():
             if isinstance(msg, dict) and msg.get("role") in ALLOWED_ROLES
         ]
 
+    # ── Pattern detection (only on first turn of a non-wrapup session) ────────
+    is_first_turn = len(safe_history) == 0 and not wrap_up_mode
+    if is_first_turn and therapy_session:
+        # Pattern A: 3 most recent completed sessions all had next_session_goal = NULL (skipped goal-setting)
+        last_three_completed = TherapySession.query.filter(
+            TherapySession.user_id == current_user.id,
+            TherapySession.completed_at.isnot(None),
+            TherapySession.id != session_id,
+        ).order_by(TherapySession.started_at.desc()).limit(3).all()
+
+        if len(last_three_completed) == 3 and all(s.next_session_goal is None for s in last_three_completed):
+            past_context += (
+                "\n\nPATTERN ALERT — open this session by gently raising it ONCE, then continue normally: "
+                "the client has skipped setting a goal at the end of their last 3 sessions in a row. "
+                "Example phrasing: \"I notice the past few times we've wrapped up without picking anything to work on between sessions. "
+                "I'm curious what's behind that — does setting a goal feel like pressure, or has nothing felt quite right? "
+                "Could we explore that?\""
+            )
+        else:
+            # Pattern B: last 3 followthrough answers (current + most recent past) all 'no' or 'skipped'
+            ft_sessions = []
+            if therapy_session.prior_goal_followthrough:
+                ft_sessions.append(therapy_session)
+            past_ft = TherapySession.query.filter(
+                TherapySession.user_id == current_user.id,
+                TherapySession.completed_at.isnot(None),
+                TherapySession.id != session_id,
+                TherapySession.prior_goal_followthrough.isnot(None),
+            ).order_by(TherapySession.started_at.desc()).limit(3).all()
+            ft_sessions.extend(past_ft)
+            last_three_ft = ft_sessions[:3]
+
+            if len(last_three_ft) == 3 and all(s.prior_goal_followthrough in ("no", "skipped") for s in last_three_ft):
+                past_context += (
+                    "\n\nPATTERN ALERT — open this session by gently raising it ONCE, then continue normally: "
+                    "the client has set goals the last 3 sessions but hasn't followed through on any of them. "
+                    "Example phrasing: \"I notice we've set goals the past few sessions and they haven't gotten followed through. "
+                    "I'm curious what's getting in the way — is it that the goals haven't felt right, or something else?\""
+                )
+
+    # TEMP DIAGNOSTIC — remove later
+    print(f"[CHAT_DIAG] session_id={session_id} risk={triage.get('risk_level')} conf={triage.get('confidence')} action={triage.get('recommended_action')} mode={policy.get('safety_mode')} hist={len(safe_history)} firstTurn={is_first_turn}", flush=True)
+
     # ── 4. Build messages with safety_mode injected into system prompt ────────
     safety_mode = policy["safety_mode"]   # NORMAL or HEIGHTENED
+    system_content = build_system_prompt(intake, safety_mode) + past_context
+
+    if wrap_up_mode:
+        system_content += (
+            "\n\nWRAP-UP MODE: The session is ending. The client may want to refine, push back on, "
+            "or change the goal you proposed. Engage with their input. After your conversational reply, "
+            "append a single line:\n"
+            "---GOAL---\n"
+            "<the current proposed goal in 1-2 sentences under 50 words>\n"
+            "If no goal has been agreed yet or the client doesn't want one, write 'NONE' after ---GOAL---."
+        )
+
     base_messages = [
-        {"role": "system", "content": build_system_prompt(intake, safety_mode) + past_context},
+        {"role": "system", "content": system_content},
         *safe_history,
         {"role": "user", "content": user_message},
     ]
@@ -175,8 +256,11 @@ def chat():
                 reply = SAFE_FALLBACK_MESSAGE
                 break
 
-            if review["verdict"] in ("APPROVE", "REVISE"):
-                reply = review["safe_response"] or SAFE_FALLBACK_MESSAGE
+            if review["verdict"] == "APPROVE":
+                reply = draft
+                break
+            if review["verdict"] == "REVISE":
+                reply = review["safe_response"] or draft or SAFE_FALLBACK_MESSAGE
                 break
 
             issues_text = "; ".join(review["issues"]) if review["issues"] else "safety violation"
@@ -198,15 +282,35 @@ def chat():
         if policy["show_warning"] and policy["warning_text"]:
             reply = policy["warning_text"] + "\n\n" + reply
 
+        # ── 6b. Wrap-up mode: split reply from proposed goal ──────────────────
+        proposed_goal = None
+        if wrap_up_mode and "---GOAL---" in reply:
+            chat_part, goal_part = reply.split("---GOAL---", 1)
+            reply = chat_part.strip()
+            goal_text = goal_part.strip()
+            if goal_text and goal_text.upper() != "NONE":
+                proposed_goal = goal_text
+            if therapy_session:
+                therapy_session.next_session_goal = proposed_goal  # may be None to clear
+
         # ── 7. Persist messages ───────────────────────────────────────────────
         if therapy_session:
             db.session.add(ChatMessage(session_id=session_id, role="user",      content=user_message))
             db.session.add(ChatMessage(session_id=session_id, role="assistant", content=reply))
             db.session.commit()
 
+        # ── 8. Sync safety net: if reply contains hotline info, fire the popup
+        if safety_mode != "CRISIS" and _HOTLINE_KEYWORDS.search(reply):
+            current_app.logger.warning(
+                "HOTLINE_SYNC user=%s session=%s — AI included hotline text; upgrading safetyMode to CRISIS",
+                current_user.id, session_id,
+            )
+            safety_mode = "CRISIS"
+
         return jsonify({
-            "reply":      reply,
-            "safetyMode": safety_mode,
+            "reply":        reply,
+            "safetyMode":   safety_mode,
+            "proposedGoal": proposed_goal,
         })
 
     except Exception as e:

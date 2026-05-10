@@ -44,9 +44,8 @@ def create_app():
     from routes.safety import safety_bp
     from routes.reports import reports_bp
     from routes.chat import chat_bp
-    from routes.webhooks import webhooks_bp
 
-    for bp in (auth_bp, intake_bp, sessions_bp, journal_bp, safety_bp, reports_bp, chat_bp, webhooks_bp):
+    for bp in (auth_bp, intake_bp, sessions_bp, journal_bp, safety_bp, reports_bp, chat_bp):
         app.register_blueprint(bp)
 
     @app.route("/")

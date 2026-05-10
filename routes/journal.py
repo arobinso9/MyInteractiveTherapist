@@ -26,5 +26,5 @@ def get_journal():
     return jsonify([{
         "id":        e.id,
         "content":   e.content,
-        "createdAt": e.created_at.isoformat()
+        "createdAt": e.created_at.isoformat() + "Z"
     } for e in entries]), 200

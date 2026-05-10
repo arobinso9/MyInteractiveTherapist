@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from flask_security import auth_required, current_user
 from models import db, SafetyAlert
@@ -25,13 +24,8 @@ def safety_trigger():
         action_taken=body.get("actionTaken", "")
     )
     db.session.add(alert)
-
-    if severity == "CRITICAL" and current_user.guardian:
-        alert.notified_at = datetime.now(timezone.utc)
-
     db.session.commit()
     return jsonify({
         "message": "Safety alert logged",
         "severity": severity,
-        "guardianNotified": alert.notified_at is not None
     }), 201

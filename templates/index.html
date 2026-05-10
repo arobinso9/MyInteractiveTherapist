@@ -654,6 +654,19 @@
             <h2>How are you feeling right now?</h2>
             <p class="subtitle">Rate your current stress level</p>
 
+            <!-- Prior goal check-in (hidden unless last session had a goal) -->
+            <div id="prior-goal-section" class="prior-goal-section" style="display: none;">
+                <h3 class="prior-goal-title">Last session check-in</h3>
+                <p class="prior-goal-text">You committed to: <em id="prior-goal-text"></em></p>
+                <div class="radio-group prior-goal-radios">
+                    <label class="radio-label"><input type="radio" name="followthrough" value="yes"> Yes, I did it</label>
+                    <label class="radio-label"><input type="radio" name="followthrough" value="partial"> Partially</label>
+                    <label class="radio-label"><input type="radio" name="followthrough" value="no"> No, I didn't</label>
+                    <label class="radio-label"><input type="radio" name="followthrough" value="skipped"> I skipped it</label>
+                </div>
+                <textarea id="prior-goal-note" class="prior-goal-note" placeholder="Tell me more about how it went…" rows="2"></textarea>
+            </div>
+
             <div class="slider-container">
                 <div class="slider-value" id="stressValue">5</div>
                 <input type="range" id="stressSlider" min="1" max="10" value="5" oninput="updateSliderValue('stressValue', this.value)">
@@ -680,7 +693,9 @@
             </div>
 
             <div class="button-group">
-                <button onclick="endSession()">End Session</button>
+                <button id="end-session-btn" onclick="endSession()">End Session</button>
+                <button id="continue-wrapup-btn" onclick="continueToPostCheck()" style="display:none;">Continue</button>
+                <button id="skip-goal-btn" class="secondary" onclick="skipGoalAndContinue()" style="display:none;">Skip goal</button>
             </div>
         </div>
 
@@ -703,6 +718,11 @@
                 <textarea id="takeaway" placeholder="What insight or feeling will you carry forward?"></textarea>
             </div>
 
+            <div class="form-group" id="post-check-goal-group">
+                <label for="next-session-goal">Your goal for next time <span style="color: var(--text-tertiary); font-weight: 400;">(optional — edit if you want)</span></label>
+                <textarea id="next-session-goal" placeholder="What's one small thing you'll work on before next session?"></textarea>
+            </div>
+
             <div class="button-group">
                 <button onclick="completeSession()">Complete Session</button>
             </div>
@@ -711,6 +731,36 @@
 
     <!-- Crisis Help Button -->
     <button class="crisis-button" onclick="showCrisisHelp()">🆘 Crisis Help</button>
+
+    <!-- Crisis Modal — fired automatically when safety pipeline detects crisis -->
+    <div id="crisis-modal" class="crisis-modal" role="dialog" aria-modal="true" aria-labelledby="crisis-modal-title" style="display: none;">
+        <div class="crisis-modal-backdrop" onclick="closeCrisisModal()"></div>
+        <div class="crisis-modal-card">
+            <h2 id="crisis-modal-title">You don't have to face this alone</h2>
+            <p class="crisis-modal-lead">
+                Something you shared made me concerned for your safety. Please reach out to a trained
+                crisis counselor right now — they're available 24/7 and ready to listen.
+            </p>
+            <ul class="crisis-modal-resources">
+                <li><strong>988</strong> — Suicide &amp; Crisis Lifeline (call or text, US)</li>
+                <li><strong>Text HOME to 741741</strong> — Crisis Text Line</li>
+                <li><strong>911</strong> — if you are in immediate danger</li>
+                <li><strong>findahelpline.com</strong> — international resources</li>
+            </ul>
+            <button class="crisis-modal-close" onclick="closeCrisisModal()">I understand</button>
+        </div>
+    </div>
+
+    <!-- Generic Confirm / Alert Modal — populated dynamically by modal.js -->
+    <div id="app-modal" class="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" style="display: none;">
+        <div class="app-modal-backdrop"></div>
+        <div class="app-modal-card">
+            <h2 id="app-modal-title"></h2>
+            <div id="app-modal-body" class="app-modal-body"></div>
+            <div id="app-modal-actions" class="app-modal-actions"></div>
+        </div>
+    </div>
+
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

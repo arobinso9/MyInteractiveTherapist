@@ -19,3 +19,6 @@ class Config:
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "change-this-salt-in-prod")
     SECURITY_TOKEN_AUTHENTICATION_HEADER = "Authentication-Token"
     WTF_CSRF_ENABLED = False
+
+    # Local dev: don't let browsers cache static JS/CSS/HTML so changes show up immediately
+    SEND_FILE_MAX_AGE_DEFAULT = 0
