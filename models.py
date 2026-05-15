@@ -73,6 +73,8 @@ class TherapySession(db.Model):
     next_session_goal        = db.Column(db.Text)   # set at session end — asked about in the NEXT session
     prior_goal_followthrough = db.Column(db.String(20))  # yes | partial | no | skipped — answered at start of THIS session
     prior_goal_note          = db.Column(db.Text)   # optional context the user typed on pre-check
+    prior_goal_engagement    = db.Column(db.String(20))  # engaged | redirected — classified from user's first reply
+    pattern_raised           = db.Column(db.Boolean, default=False, nullable=False)  # True if a goal-disengagement pattern alert fired in this session's greeting
     embedding                = db.Column(db.Text)
 
     messages = db.relationship("ChatMessage", backref="session", lazy=True, cascade="all, delete-orphan")

@@ -1,4 +1,5 @@
 import re
+from threading import Thread
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_security import auth_required, current_user
@@ -7,9 +8,21 @@ from utils.prompts import build_system_prompt
 from utils.risk_triage import triage_message
 from utils.risk_engine import run_policy
 from utils.safety_review import review_reply
+from utils.goal_engagement import classify_goal_engagement
 from extensions import limiter
 
 MAX_SAFETY_RETRIES = 3
+
+
+def _classify_engagement_async(app, openai_client, session_id: int, user_reply: str):
+    """Runs in a background thread — classifies and saves engagement without blocking the request."""
+    with app.app_context():
+        result = classify_goal_engagement(openai_client, user_reply)
+        if result:
+            db.session.query(TherapySession).filter_by(id=session_id).update(
+                {"prior_goal_engagement": result}
+            )
+            db.session.commit()
 
 # Sync safety net: if a reply contains any of these, the popup fires regardless of triage verdict
 _HOTLINE_KEYWORDS = re.compile(
@@ -172,45 +185,15 @@ def chat():
             if isinstance(msg, dict) and msg.get("role") in ALLOWED_ROLES
         ]
 
-    # ── Pattern detection (only on first turn of a non-wrapup session) ────────
+    # ── First-turn-only side-effects (no pattern alert here — handled at greeting time) ────
     is_first_turn = len(safe_history) == 0 and not wrap_up_mode
-    if is_first_turn and therapy_session:
-        # Pattern A: 3 most recent completed sessions all had next_session_goal = NULL (skipped goal-setting)
-        last_three_completed = TherapySession.query.filter(
-            TherapySession.user_id == current_user.id,
-            TherapySession.completed_at.isnot(None),
-            TherapySession.id != session_id,
-        ).order_by(TherapySession.started_at.desc()).limit(3).all()
-
-        if len(last_three_completed) == 3 and all(s.next_session_goal is None for s in last_three_completed):
-            past_context += (
-                "\n\nPATTERN ALERT — open this session by gently raising it ONCE, then continue normally: "
-                "the client has skipped setting a goal at the end of their last 3 sessions in a row. "
-                "Example phrasing: \"I notice the past few times we've wrapped up without picking anything to work on between sessions. "
-                "I'm curious what's behind that — does setting a goal feel like pressure, or has nothing felt quite right? "
-                "Could we explore that?\""
-            )
-        else:
-            # Pattern B: last 3 followthrough answers (current + most recent past) all 'no' or 'skipped'
-            ft_sessions = []
-            if therapy_session.prior_goal_followthrough:
-                ft_sessions.append(therapy_session)
-            past_ft = TherapySession.query.filter(
-                TherapySession.user_id == current_user.id,
-                TherapySession.completed_at.isnot(None),
-                TherapySession.id != session_id,
-                TherapySession.prior_goal_followthrough.isnot(None),
-            ).order_by(TherapySession.started_at.desc()).limit(3).all()
-            ft_sessions.extend(past_ft)
-            last_three_ft = ft_sessions[:3]
-
-            if len(last_three_ft) == 3 and all(s.prior_goal_followthrough in ("no", "skipped") for s in last_three_ft):
-                past_context += (
-                    "\n\nPATTERN ALERT — open this session by gently raising it ONCE, then continue normally: "
-                    "the client has set goals the last 3 sessions but hasn't followed through on any of them. "
-                    "Example phrasing: \"I notice we've set goals the past few sessions and they haven't gotten followed through. "
-                    "I'm curious what's getting in the way — is it that the goals haven't felt right, or something else?\""
-                )
+    if is_first_turn and therapy_session and prior_goal_session and prior_goal_session.next_session_goal:
+        # Fire-and-forget: classify whether this first reply engaged with or redirected from the prior-goal topic
+        Thread(
+            target=_classify_engagement_async,
+            args=(current_app._get_current_object(), client, session_id, user_message),
+            daemon=True,
+        ).start()
 
     # TEMP DIAGNOSTIC — remove later
     print(f"[CHAT_DIAG] session_id={session_id} risk={triage.get('risk_level')} conf={triage.get('confidence')} action={triage.get('recommended_action')} mode={policy.get('safety_mode')} hist={len(safe_history)} firstTurn={is_first_turn}", flush=True)

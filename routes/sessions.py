@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_security import auth_required, current_user
 from models import db, TherapySession, ChatMessage
+from utils.prompts import build_greeting_prompt
+from utils.goal_patterns import detect_goal_pattern
 
 sessions_bp = Blueprint("sessions", __name__)
 
@@ -69,6 +71,60 @@ def start_session():
     return jsonify({"sessionId": session.id}), 201
 
 
+@sessions_bp.route("/api/sessions/<int:session_id>/greeting", methods=["POST"])
+@auth_required()
+def session_greeting(session_id):
+    session = TherapySession.query.filter_by(id=session_id, user_id=current_user.id).first()
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+
+    intake      = current_user.intake.data if current_user.intake else {}
+    client_name = (
+        intake.get("preferredName")
+        or (intake.get("fullName") or "").split()[0]
+        or "there"
+    )
+
+    prior = TherapySession.query.filter_by(user_id=current_user.id)\
+        .filter(TherapySession.id != session_id)\
+        .filter(TherapySession.completed_at.isnot(None))\
+        .order_by(TherapySession.completed_at.desc()).first()
+    prior_goal = prior.next_session_goal if prior else None
+
+    pattern = detect_goal_pattern(user_id=current_user.id, exclude_session_id=session_id)
+    pattern_breakdown = pattern["breakdown"] if pattern else None
+
+    # Nothing substantive to say — fast hardcoded path, no AI call
+    if not prior_goal and not pattern_breakdown:
+        return jsonify({"greeting": f"Hello {client_name}, I'm here to listen. What would you like to talk about today?"}), 200
+
+    prompt = build_greeting_prompt(
+        client_name=client_name,
+        prior_goal=prior_goal,
+        followthrough=session.prior_goal_followthrough,
+        note=session.prior_goal_note,
+        pattern_breakdown=pattern_breakdown,
+    )
+
+    try:
+        client = current_app.extensions["openai_client"]
+        resp = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[{"role": "system", "content": prompt}],
+            max_tokens=250,
+            temperature=0.7,
+        )
+        greeting = (resp.choices[0].message.content or "").strip()
+        # Only mark pattern_raised when the AI actually delivered a pattern-aware greeting
+        if pattern_breakdown:
+            session.pattern_raised = True
+            db.session.commit()
+    except Exception:
+        greeting = f"Hello {client_name}. Good to see you back — what's on your mind today?"
+
+    return jsonify({"greeting": greeting}), 200
+
+
 @sessions_bp.route("/api/sessions/<int:session_id>/complete", methods=["POST"])
 @auth_required()
 def complete_session(session_id):
@@ -96,7 +152,7 @@ def complete_session(session_id):
         try:
             client = current_app.extensions["openai_client"]
             summary_response = client.chat.completions.create(
-                model="gpt-4.1",
+                model="gpt-4.1-mini",
                 messages=[
                     {"role": "system", "content": (
                         "You are summarizing a therapy session. Produce TWO outputs separated by the delimiter '---BRIEF---':\n"

@@ -24,7 +24,8 @@ export async function startNewSession(render) {
         const res = await fetch('/api/sessions');
         if (res.ok) {
             const sessions = await res.json();   // descending by started_at
-            const priorWithGoal = sessions.find(s => s.completedAt && s.nextSessionGoal);
+            const mostRecentCompleted = sessions.find(s => s.completedAt);
+            const priorWithGoal = mostRecentCompleted?.nextSessionGoal ? mostRecentCompleted : null;
             if (priorWithGoal) {
                 document.getElementById('prior-goal-text').textContent = priorWithGoal.nextSessionGoal;
                 state.sessionData.priorGoal = priorWithGoal.nextSessionGoal;
@@ -93,28 +94,22 @@ export async function enterTherapySession(render) {
         }
     } catch { /* fall back to username */ }
 
-    // Dynamic greeting — reference the prior goal, the followthrough answer, and the note
-    let greeting;
-    if (state.sessionData.priorGoal && followthrough) {
-        const answerPhrase = {
-            yes:      'you said you did it',
-            partial:  'you said you partially did it',
-            no:       "you said you didn't get to it",
-            skipped:  'you said you skipped it',
-        }[followthrough] || '';
-        greeting = `Hello ${name}. Last session you committed to: "${state.sessionData.priorGoal}" — ${answerPhrase}.`;
-        if (note) {
-            greeting += ` You also wrote: "${note}". I'd love to hear more about that.`;
-        } else {
-            greeting += ` I'd love to hear how that went for you.`;
-        }
-    } else {
-        greeting = `Hello ${name}, I'm here to listen. What would you like to talk about today?`;
-    }
+    // Always fetch the greeting from the backend — it decides whether to use AI
+    // (prior goal or pattern alert) or return a fast hardcoded hello.
+    const fallback = `Hello ${name}, I'm here to listen. What would you like to talk about today?`;
 
-    state.sessionData.chatHistory = [{ type: 'therapist', text: greeting }];
+    state.sessionData.chatHistory = [{ type: 'thinking', text: 'Thinking...' }];
     renderChatMessages();
     render('session');
+
+    try {
+        const gres = await fetch(`/api/sessions/${state.sessionData.sessionId}/greeting`, { method: 'POST' });
+        const text = gres.ok ? (await gres.json()).greeting : fallback;
+        state.sessionData.chatHistory = [{ type: 'therapist', text }];
+    } catch {
+        state.sessionData.chatHistory = [{ type: 'therapist', text: fallback }];
+    }
+    renderChatMessages();
 }
 
 export async function endSession(render) {
@@ -185,9 +180,12 @@ export function continueToPostCheck(render) {
     updateSliderValue('resolutionValue', 5);
     document.getElementById('takeaway').value = '';
 
-    // Pre-fill the goal field with the AI's latest proposal (user can edit)
-    const goalField = document.getElementById('next-session-goal');
-    if (goalField) goalField.value = state.sessionData.proposedGoal || '';
+    // Show the goal that was agreed in chat (read-only). Hide the block entirely if there is no goal.
+    const goalGroup   = document.getElementById('post-check-goal-group');
+    const goalDisplay = document.getElementById('next-session-goal-display');
+    const goal        = state.sessionData.proposedGoal || '';
+    if (goalDisplay) goalDisplay.textContent = goal;
+    if (goalGroup)   goalGroup.style.display = goal ? '' : 'none';
 
     render('post-check');
 }
@@ -195,10 +193,16 @@ export function continueToPostCheck(render) {
 export async function completeSession(render) {
     const finalStress = parseInt(document.getElementById('resolutionSlider').value);
     const takeaway    = document.getElementById('takeaway').value.trim();
-    const goalField   = document.getElementById('next-session-goal');
-    const goal        = goalField ? goalField.value.trim() : '';
+    const goal        = (state.sessionData.proposedGoal || '').trim();
 
     if (!takeaway) { alert('Please share your key takeaway before completing the session'); return; }
+
+    // Lock the button + show progress so the user sees something happen immediately
+    const completeBtn = document.getElementById('complete-session-btn');
+    if (completeBtn) {
+        completeBtn.disabled = true;
+        completeBtn.textContent = 'Completing…';
+    }
 
     if (state.sessionData.sessionId) {
         try {

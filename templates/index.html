@@ -719,12 +719,12 @@
             </div>
 
             <div class="form-group" id="post-check-goal-group">
-                <label for="next-session-goal">Your goal for next time <span style="color: var(--text-tertiary); font-weight: 400;">(optional — edit if you want)</span></label>
-                <textarea id="next-session-goal" placeholder="What's one small thing you'll work on before next session?"></textarea>
+                <label>Your goal for next time</label>
+                <p class="prior-goal-text"><em id="next-session-goal-display"></em></p>
             </div>
 
             <div class="button-group">
-                <button onclick="completeSession()">Complete Session</button>
+                <button id="complete-session-btn" onclick="completeSession()">Complete Session</button>
             </div>
         </div>
     </div>
