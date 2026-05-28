@@ -10,7 +10,7 @@
 ---
 
 ## Table of Contents
-
+ 
 1. [Executive Summary](#1-executive-summary)
 2. [The Application: What ZenShell Is](#2-the-application-what-zenshell-is)
 3. [Feature Catalog](#3-feature-catalog)
