@@ -152,11 +152,22 @@ def complete_session(session_id):
         user_msg_count = sum(1 for m in messages if m.role == "user")
         transcript = "\n".join([f"{m.role.upper()}: {m.content}" for m in messages])
 
+        scope_rule = (
+            "SCOPE — IMPORTANT: Summarize ONLY content that originated in THIS session — "
+            "what the client brought up, processed, or worked through today. "
+            "The therapist may have referenced prior sessions for continuity "
+            "(e.g. 'last session you mentioned X', 'a few weeks ago you were working on Y'). "
+            "Those callbacks are the therapist's memory cues — they are NOT this session's content. "
+            "Do not include any specifics that the therapist surfaced from past sessions; "
+            "only include them if the CLIENT independently brought them up or engaged with them substantively this session."
+        )
+
         if user_msg_count <= 5:
             system_prompt = (
                 "You are summarizing a very short therapy session in 1-2 sentences. "
                 "The session was brief — only a few exchanges. Capture only what was actually said. "
-                "Be plain and clinical; do not pad or invent themes that didn't come up."
+                "Be plain and clinical; do not pad or invent themes that didn't come up.\n\n"
+                + scope_rule
             )
             max_tokens = 80
         else:
@@ -165,7 +176,8 @@ def complete_session(session_id):
                 "1. A thorough summary in up to 2 paragraphs. Cover: presenting mood, key themes discussed, "
                 "emotional shifts, therapeutic techniques used, progress made, any concerns or risks, and homework/action items. "
                 "Be clinical but compassionate.\n"
-                "2. A brief version: 2-3 sentences only. Hit the most important point, mood outcome, and any follow-up needed."
+                "2. A brief version: 2-3 sentences only. Hit the most important point, mood outcome, and any follow-up needed.\n\n"
+                + scope_rule
             )
             max_tokens = 400
 
