@@ -68,7 +68,7 @@ class TherapySession(db.Model):
     summary                  = db.Column(db.Text)
     brief_summary            = db.Column(db.Text)   # 2-3 bullet points for older session context
     next_session_goal        = db.Column(db.Text)   # set at session end — asked about in the NEXT session
-    prior_goal_followthrough = db.Column(db.String(20))  # yes | partial | no | skipped — answered at start of THIS session
+    prior_goal_followthrough = db.Column(db.String(20))  # yes | partial | no — answered at start of THIS session
     prior_goal_note          = db.Column(db.Text)   # optional context the user typed on pre-check
     embedding                = db.Column(db.Text)
 

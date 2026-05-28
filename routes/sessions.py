@@ -43,7 +43,7 @@ def delete_sessions():
     return jsonify({"message": f"Deleted {len(sessions)} session(s)", "count": len(sessions)}), 200
 
 
-_VALID_FOLLOWTHROUGH = {"yes", "partial", "no", "skipped"}
+_VALID_FOLLOWTHROUGH = {"yes", "partial", "no"}
 
 
 @sessions_bp.route("/api/sessions", methods=["POST"])
