@@ -68,15 +68,14 @@ def build_greeting_prompt(
     prior_goal: str | None = None,
     followthrough: str | None = None,
     note: str | None = None,
-    pattern_breakdown: str | None = None,
+    prior_skipped_goal: bool = False,
 ) -> str:
     """Prompt for generating the opening therapist greeting.
 
-    Handles four cases:
-      - prior_goal + pattern_breakdown  → paraphrase goal AND gently raise the pattern
-      - prior_goal only                 → paraphrase goal, ask permission to discuss
-      - pattern_breakdown only          → warm hello + gently raise the pattern
-      - neither                         → simple warm hello
+    Handles three cases:
+      - prior_goal → paraphrase goal, ask permission to discuss
+      - prior_skipped_goal → gently note no goal was set, ask what to focus on
+      - neither → simple warm hello (handled by caller's fast path)
     """
     answer_phrases = {
         "yes":     "they followed through",
@@ -96,42 +95,38 @@ Prior-goal context:
 - What they typed about how it went (verbatim): "{note or '(no note)'}"
 """
 
-    pattern_block = ""
-    if pattern_breakdown:
-        pattern_block = f"""
+    skipped_block = ""
+    if prior_skipped_goal:
+        skipped_block = """
 
-Pattern context (the last 3 sessions show a goal-disengagement pattern — any combination of not setting one, not following through, or not wanting to discuss it):
-{pattern_breakdown}
+Context: the client had a substantive last session but ended it without setting a goal for this week. Don't be accusatory — they were engaged, they just chose not to pick something to work on between sessions.
 """
 
-    # Build the instruction list based on what's present
     requirements = [f"Greet {client_name} warmly by name."]
     if prior_goal:
-        requirements.append("Paraphrase the goal in your own words — DO NOT quote it verbatim.")
-        requirements.append("Briefly reflect what they said in their note — paraphrase, don't quote.")
-    if pattern_breakdown:
-        requirements.append(
-            "Gently name the pattern you've noticed across the past few sessions ONCE. "
-            "Be warm and curious, not accusatory. Acknowledge the mix of ways it's shown up "
-            "(not setting, not following through, not wanting to discuss). "
-            "Make clear there's no pressure — you're just curious."
-        )
-    if prior_goal and not pattern_breakdown:
         requirements.append(
             "End by asking permission: invite them to talk about how the goal went OR jump into something else. "
             "Make it a real choice, not a nudge."
         )
-    elif pattern_breakdown:
+    elif prior_skipped_goal:
         requirements.append(
-            "End by inviting them to share what's behind the pattern OR just talk about whatever's on their mind today. "
-            "Make it a real choice, not a nudge."
+            "Gently and warmly mention that last session wrapped up without picking a goal — be curious, not pushy. "
+            "Ask what they'd like to focus on today, framing it as a real open invitation."
         )
     else:
         requirements.append("Ask what they'd like to talk about today.")
     requirements.append("No bullet points, no formatting. Plain conversational text. Warm but not effusive. 2-4 sentences total.")
 
     req_text = "\n".join(f"- {r}" for r in requirements)
-    return f"""You are writing the FIRST message a therapist will send to {client_name} as they return for a new session.{goal_block}{pattern_block}
 
+    critical_rules = """
+CRITICAL RULES — these override everything else:
+1. NEVER quote the client's text. Not the goal, not the note, not a single word in quotation marks. Always rephrase in your own words.
+2. If the note is short, unclear, gibberish, or hard to paraphrase meaningfully (e.g. "lkj", "idk", "...", "ok"), IGNORE it entirely. Do not mention what they wrote, do not refer to it, do not invent meaning. Just move on to the goal or the open question.
+3. If you reference the goal, paraphrase its meaning — do not echo its wording.
+"""
+
+    return f"""You are writing the FIRST message a therapist will send to {client_name} as they return for a new session.{goal_block}{skipped_block}
+{critical_rules}
 Write a single short opening message. Requirements:
 {req_text}"""

@@ -119,6 +119,14 @@ export async function endSession(render) {
         return;
     }
 
+    // Skip wrap-up + goal-setting for trivial sessions (≤5 user messages)
+    const userMsgCount = (state.sessionData.chatHistory || []).filter(m => m.type === 'user').length;
+    if (userMsgCount <= 5) {
+        state.sessionData.proposedGoal = null;
+        continueToPostCheck(render);
+        return;
+    }
+
     // Disable End Session button + lock state so we don't fire it twice
     const endBtn      = document.getElementById('end-session-btn');
     const continueBtn = document.getElementById('continue-wrapup-btn');
@@ -175,6 +183,10 @@ export function continueToPostCheck(render) {
     if (endBtn) { endBtn.style.display = ''; endBtn.disabled = false; }
     if (continueBtn) continueBtn.style.display = 'none';
     if (skipBtn) skipBtn.style.display = 'none';
+
+    // Reset Complete button — otherwise it stays disabled + "Completing…" from the prior session
+    const completeBtn = document.getElementById('complete-session-btn');
+    if (completeBtn) { completeBtn.disabled = false; completeBtn.textContent = 'Complete Session'; }
 
     document.getElementById('resolutionSlider').value = 5;
     updateSliderValue('resolutionValue', 5);

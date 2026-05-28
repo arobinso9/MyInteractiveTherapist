@@ -3,7 +3,6 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_security import auth_required, current_user
 from models import db, TherapySession, ChatMessage
 from utils.prompts import build_greeting_prompt
-from utils.goal_patterns import detect_goal_pattern
 
 sessions_bp = Blueprint("sessions", __name__)
 
@@ -91,11 +90,17 @@ def session_greeting(session_id):
         .order_by(TherapySession.completed_at.desc()).first()
     prior_goal = prior.next_session_goal if prior else None
 
-    pattern = detect_goal_pattern(user_id=current_user.id, exclude_session_id=session_id)
-    pattern_breakdown = pattern["breakdown"] if pattern else None
+    # Did the prior (substantive) session end without setting a goal? Only flag for sessions
+    # that were real conversations (>5 user messages) — trivial sessions don't warrant a callout.
+    prior_skipped_goal = False
+    if prior and not prior_goal:
+        prior_user_msg_count = ChatMessage.query.filter_by(
+            session_id=prior.id, role="user"
+        ).count()
+        prior_skipped_goal = prior_user_msg_count > 5
 
     # Nothing substantive to say — fast hardcoded path, no AI call
-    if not prior_goal and not pattern_breakdown:
+    if not prior_goal and not prior_skipped_goal:
         return jsonify({"greeting": f"Hello {client_name}, I'm here to listen. What would you like to talk about today?"}), 200
 
     prompt = build_greeting_prompt(
@@ -103,7 +108,7 @@ def session_greeting(session_id):
         prior_goal=prior_goal,
         followthrough=session.prior_goal_followthrough,
         note=session.prior_goal_note,
-        pattern_breakdown=pattern_breakdown,
+        prior_skipped_goal=prior_skipped_goal,
     )
 
     try:
@@ -115,10 +120,6 @@ def session_greeting(session_id):
             temperature=0.7,
         )
         greeting = (resp.choices[0].message.content or "").strip()
-        # Only mark pattern_raised when the AI actually delivered a pattern-aware greeting
-        if pattern_breakdown:
-            session.pattern_raised = True
-            db.session.commit()
     except Exception:
         greeting = f"Hello {client_name}. Good to see you back — what's on your mind today?"
 
@@ -148,22 +149,35 @@ def complete_session(session_id):
         .order_by(ChatMessage.timestamp).all()
 
     if messages:
+        user_msg_count = sum(1 for m in messages if m.role == "user")
         transcript = "\n".join([f"{m.role.upper()}: {m.content}" for m in messages])
+
+        if user_msg_count <= 5:
+            system_prompt = (
+                "You are summarizing a very short therapy session in 1-2 sentences. "
+                "The session was brief — only a few exchanges. Capture only what was actually said. "
+                "Be plain and clinical; do not pad or invent themes that didn't come up."
+            )
+            max_tokens = 80
+        else:
+            system_prompt = (
+                "You are summarizing a therapy session. Produce TWO outputs separated by the delimiter '---BRIEF---':\n"
+                "1. A thorough summary in up to 2 paragraphs. Cover: presenting mood, key themes discussed, "
+                "emotional shifts, therapeutic techniques used, progress made, any concerns or risks, and homework/action items. "
+                "Be clinical but compassionate.\n"
+                "2. A brief version: 2-3 sentences only. Hit the most important point, mood outcome, and any follow-up needed."
+            )
+            max_tokens = 400
+
         try:
             client = current_app.extensions["openai_client"]
             summary_response = client.chat.completions.create(
                 model="gpt-4.1-mini",
                 messages=[
-                    {"role": "system", "content": (
-                        "You are summarizing a therapy session. Produce TWO outputs separated by the delimiter '---BRIEF---':\n"
-                        "1. A thorough summary in up to 2 paragraphs. Cover: presenting mood, key themes discussed, "
-                        "emotional shifts, therapeutic techniques used, progress made, any concerns or risks, and homework/action items. "
-                        "Be clinical but compassionate.\n"
-                        "2. A brief version: 2-3 sentences only. Hit the most important point, mood outcome, and any follow-up needed."
-                    )},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Summarize this session:\n\n{transcript}"}
                 ],
-                max_tokens=400,
+                max_tokens=max_tokens,
                 temperature=0.5
             )
             raw = summary_response.choices[0].message.content
@@ -195,6 +209,11 @@ def wrap_up_session(session_id):
         .order_by(ChatMessage.timestamp).all()
     if not messages:
         return jsonify({"error": "No messages in session to wrap up"}), 400
+
+    # Trivial-session safety net: no goal-setting for ≤5 user messages.
+    user_msg_count = sum(1 for m in messages if m.role == "user")
+    if user_msg_count <= 5:
+        return jsonify({"reply": "Thanks for sharing today — take care.", "proposedGoal": ""}), 200
 
     transcript = "\n".join(f"{m.role.upper()}: {m.content}" for m in messages)
 

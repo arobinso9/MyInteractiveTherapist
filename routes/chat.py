@@ -1,28 +1,16 @@
 import re
-from threading import Thread
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_security import auth_required, current_user
-from models import db, TherapySession, ChatMessage, SafetyAlert
+from models import db, TherapySession, ChatMessage
 from utils.prompts import build_system_prompt
 from utils.risk_triage import triage_message
 from utils.risk_engine import run_policy
 from utils.safety_review import review_reply
-from utils.goal_engagement import classify_goal_engagement
 from extensions import limiter
 
 MAX_SAFETY_RETRIES = 3
 
-
-def _classify_engagement_async(app, openai_client, session_id: int, user_reply: str):
-    """Runs in a background thread — classifies and saves engagement without blocking the request."""
-    with app.app_context():
-        result = classify_goal_engagement(openai_client, user_reply)
-        if result:
-            db.session.query(TherapySession).filter_by(id=session_id).update(
-                {"prior_goal_engagement": result}
-            )
-            db.session.commit()
 
 # Sync safety net: if a reply contains any of these, the popup fires regardless of triage verdict
 _HOTLINE_KEYWORDS = re.compile(
@@ -184,19 +172,6 @@ def chat():
             for msg in raw_history
             if isinstance(msg, dict) and msg.get("role") in ALLOWED_ROLES
         ]
-
-    # ── First-turn-only side-effects (no pattern alert here — handled at greeting time) ────
-    is_first_turn = len(safe_history) == 0 and not wrap_up_mode
-    if is_first_turn and therapy_session and prior_goal_session and prior_goal_session.next_session_goal:
-        # Fire-and-forget: classify whether this first reply engaged with or redirected from the prior-goal topic
-        Thread(
-            target=_classify_engagement_async,
-            args=(current_app._get_current_object(), client, session_id, user_message),
-            daemon=True,
-        ).start()
-
-    # TEMP DIAGNOSTIC — remove later
-    print(f"[CHAT_DIAG] session_id={session_id} risk={triage.get('risk_level')} conf={triage.get('confidence')} action={triage.get('recommended_action')} mode={policy.get('safety_mode')} hist={len(safe_history)} firstTurn={is_first_turn}", flush=True)
 
     # ── 4. Build messages with safety_mode injected into system prompt ────────
     safety_mode = policy["safety_mode"]   # NORMAL or HEIGHTENED

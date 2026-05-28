@@ -38,12 +38,9 @@ class User(db.Model, UserMixin):
     created_at    = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     roles         = db.relationship("Role", secondary=user_roles, backref=db.backref("users", lazy="dynamic"))
 
-    intake              = db.relationship("IntakeProfile",     backref="user", uselist=False, cascade="all, delete-orphan")
-    sessions            = db.relationship("TherapySession",    backref="user", lazy=True,     cascade="all, delete-orphan")
-    assignments         = db.relationship("Assignment",        backref="user", lazy=True,     cascade="all, delete-orphan")
-    journal_entries     = db.relationship("JournalEntry",      backref="user", lazy=True,     cascade="all, delete-orphan")
-    safety_alerts       = db.relationship("SafetyAlert",       backref="user", lazy=True,     cascade="all, delete-orphan")
-    analytics_snapshots = db.relationship("AnalyticsSnapshot", backref="user", lazy=True,     cascade="all, delete-orphan")
+    intake        = db.relationship("IntakeProfile",  backref="user", uselist=False, cascade="all, delete-orphan")
+    sessions      = db.relationship("TherapySession", backref="user", lazy=True,     cascade="all, delete-orphan")
+    safety_alerts = db.relationship("SafetyAlert",    backref="user", lazy=True,     cascade="all, delete-orphan")
 
 
 class IntakeProfile(db.Model):
@@ -73,8 +70,6 @@ class TherapySession(db.Model):
     next_session_goal        = db.Column(db.Text)   # set at session end — asked about in the NEXT session
     prior_goal_followthrough = db.Column(db.String(20))  # yes | partial | no | skipped — answered at start of THIS session
     prior_goal_note          = db.Column(db.Text)   # optional context the user typed on pre-check
-    prior_goal_engagement    = db.Column(db.String(20))  # engaged | redirected — classified from user's first reply
-    pattern_raised           = db.Column(db.Boolean, default=False, nullable=False)  # True if a goal-disengagement pattern alert fired in this session's greeting
     embedding                = db.Column(db.Text)
 
     messages = db.relationship("ChatMessage", backref="session", lazy=True, cascade="all, delete-orphan")
@@ -90,28 +85,6 @@ class ChatMessage(db.Model):
     timestamp  = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-class Assignment(db.Model):
-    __tablename__ = "assignments"
-    id           = db.Column(db.Integer, primary_key=True)
-    user_id      = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    session_id   = db.Column(db.Integer, db.ForeignKey("therapy_sessions.id", ondelete="SET NULL"))
-    title        = db.Column(db.String(100), nullable=False)
-    description  = db.Column(db.Text)
-    status       = db.Column(db.String(20), default="assigned")
-    due_date     = db.Column(db.DateTime)
-    feedback     = db.Column(db.Text)
-    completed_at = db.Column(db.DateTime)
-
-
-class JournalEntry(db.Model):
-    __tablename__ = "journal_entries"
-    id         = db.Column(db.Integer, primary_key=True)
-    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    content    = db.Column(db.Text, nullable=False)
-    image_url  = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
-
 class SafetyAlert(db.Model):
     __tablename__ = "safety_alerts"
     id             = db.Column(db.Integer, primary_key=True)
@@ -123,14 +96,6 @@ class SafetyAlert(db.Model):
     notified_at    = db.Column(db.DateTime)
     action_taken   = db.Column(db.Text)
     resolved       = db.Column(db.Boolean, default=False)
-
-
-class AnalyticsSnapshot(db.Model):
-    __tablename__ = "analytics_snapshots"
-    id         = db.Column(db.Integer, primary_key=True)
-    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    week_start = db.Column(db.DateTime)
-    data       = db.Column(db.JSON)
 
 
 class UserRiskState(db.Model):

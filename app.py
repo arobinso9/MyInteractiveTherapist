@@ -30,7 +30,7 @@ def create_app():
     _api_key = os.getenv("OPENAI_API_KEY")
     if not _api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
-    app.extensions["openai_client"] = OpenAI(api_key=_api_key)
+    app.extensions["openai_client"] = OpenAI(api_key=_api_key, timeout=30.0, max_retries=1)
 
     # Create DB tables
     with app.app_context():
@@ -40,12 +40,9 @@ def create_app():
     from routes.auth import auth_bp
     from routes.intake import intake_bp
     from routes.sessions import sessions_bp
-    from routes.journal import journal_bp
-    from routes.safety import safety_bp
-    from routes.reports import reports_bp
     from routes.chat import chat_bp
 
-    for bp in (auth_bp, intake_bp, sessions_bp, journal_bp, safety_bp, reports_bp, chat_bp):
+    for bp in (auth_bp, intake_bp, sessions_bp, chat_bp):
         app.register_blueprint(bp)
 
     @app.route("/")
@@ -58,4 +55,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=False, threaded=True)

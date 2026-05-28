@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_security import current_user, login_user, logout_user, hash_password, verify_password
-from models import db, User
+from models import db, User, UserRiskState
 import extensions
 
 auth_bp = Blueprint("auth", __name__)
@@ -79,6 +79,9 @@ def delete_account():
         return jsonify({"error": "Not logged in"}), 401
     user = current_user._get_current_object()
     logout_user()
+    # UserRiskState has no ORM cascade on the User side — delete it manually first
+    # to avoid a foreign-key violation when the user row is removed.
+    UserRiskState.query.filter_by(user_id=user.id).delete()
     db.session.delete(user)
     db.session.commit()
     return jsonify({"message": "Account deleted"}), 200
